@@ -36,12 +36,11 @@ function formatUTC(d){
 }
 
 function formatDuration(seconds) {
-  if (typeof seconds !== 'number' || !isFinite(seconds)) return '-';
+  if (typeof seconds !== 'number' || !isFinite(seconds)) return '00:00';
   seconds = Math.floor(seconds);
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
+  const m = Math.floor(seconds / 60);
   const s = seconds % 60;
-  return `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+  return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
 }
 
 const statusEl = document.getElementById('status');
@@ -55,7 +54,7 @@ function renderTable() {
   schedule.forEach(item=>{
     const tr = document.createElement('tr');
     tr.id = `row-${item.idx}`;
-    tr.innerHTML = `<td>${item.idx}</td><td>${formatUTC(item.start)}</td><td>${item.title || item.url}</td><td>${item.airDate}</td><td>${formatDuration(item.duration)}</td><td id="st-${item.idx}">-</td>`;
+    tr.innerHTML = `<td>${item.idx}</td><td>${formatUTC(item.start)}</td><td>${item.title || item.url}</td><td>${item.airDate}</td><td id="st-${item.idx}">-</td>`;
     tableBody.appendChild(tr);
   });
 }
@@ -159,20 +158,15 @@ async function handlePlaybackAtLoad(seekTo = null){
   player.preload = 'metadata';
   player.src = currentItem.url;
   
-  // Create time display
-  const timeDisplay = document.createElement('div');
-  timeDisplay.className = 'time-display';
-  
-  // Update time display every second
+  // Update status with current time when playing
   player.addEventListener('timeupdate', () => {
-    const currentTime = formatDuration(Math.floor(player.currentTime));
-    const duration = formatDuration(Math.floor(player.duration));
-    timeDisplay.textContent = `${currentTime} / ${duration}`;
+    if (currentItem && !player.paused) {
+      const currentTime = formatDuration(Math.floor(player.currentTime));
+      setItemStatus(currentItem, `Playing (${currentTime})`);
+    }
   });
 
-  playerContainer.appendChild(timeDisplay);
   mediaContainer.appendChild(player);
-  mediaContainer.appendChild(playerContainer);
 
   showLoadingModal();
   
@@ -234,7 +228,7 @@ async function handlePlaybackAtLoad(seekTo = null){
   try {
     await player.play();
     statusEl.textContent = `Playing: ${currentItem.title || currentItem.url}`;
-    setItemStatus(currentItem,'Playing');
+    setItemStatus(currentItem, `Playing (${formatDuration(0)})`);
   } catch {
     statusEl.textContent = 'Autoplay blocked - click Play to start';
     setItemStatus(currentItem,'Waiting');
@@ -249,6 +243,7 @@ document.getElementById('modalPlayBtn').addEventListener('click', async () => {
     try {
       await player.play();
       statusEl.textContent = `Playing: ${currentItem.title || currentItem.url}`;
+      setItemStatus(currentItem, `Playing (${formatDuration(player.currentTime)})`);
       document.getElementById('autoplayModal').style.display = 'none';
     } catch (err) {
       statusEl.textContent = 'Failed to start playback';
