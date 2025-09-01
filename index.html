@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RFR Classic</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="header-container">
+    <h1>RFR Classic</h1>
+  </div>
+  
+  <div class="controls">
+    <button id="playToggle" class="primary">Play</button>
+    <div id="status">Not loaded</div>
+  </div>
+
+  <div class="content-container">
+    <div class="schedTable-container">
+      <table id="schedTable">
+        <thead>
+          <tr><th>#</th><th>Start (UTC)</th><th>Track</th><th>Air Date</th><th>Duration (s)</th><th>Status</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="mediaContainer"></div>
+
+  <div id="autoplayModal">
+    <div class="modal-content">
+      <h2 class="modal-heading">Autoplay Blocked</h2>
+      <p class="modal-text">Your browser blocked autoplay. Click below to start playback.</p>
+      <button id="modalPlayBtn">Play</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
