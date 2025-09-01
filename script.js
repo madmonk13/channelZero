@@ -96,6 +96,14 @@ function setItemStatus(item, text){
   if(el) el.textContent = text;
 }
 
+function showLoadingModal() {
+  document.getElementById('loadingModal').style.display = 'flex';
+}
+
+function hideLoadingModal() {
+  document.getElementById('loadingModal').style.display = 'none';
+}
+
 async function handlePlaybackAtLoad(seekTo = null){
   const now = new Date();
   const found = findCurrent(now);
@@ -150,14 +158,30 @@ async function handlePlaybackAtLoad(seekTo = null){
   player.src = currentItem.url;
   mediaContainer.appendChild(player);
 
+  showLoadingModal();
+  
   await new Promise(resolve=>{
+    const loadTimeout = setTimeout(() => {
+      hideLoadingModal();
+      resolve();
+    }, 30000); // Timeout after 30 seconds
+    
     player.addEventListener('loadedmetadata', ()=>{
+      clearTimeout(loadTimeout);
+      hideLoadingModal();
       let seek = elapsed;
       const dur = currentItem.duration ?? player.duration;
       if(dur && seek >= dur) seek = Math.max(0, dur - 0.5);
       try{player.currentTime = Math.max(0, seek);}catch{}
       resolve();
     });
+    
+    player.addEventListener('error', () => {
+      clearTimeout(loadTimeout);
+      hideLoadingModal();
+      resolve();
+    });
+    
     player.load();
   });
 
