@@ -46,7 +46,6 @@ function formatDuration(seconds) {
 
 const statusEl = document.getElementById('status');
 const tableBody = document.querySelector('#schedTable tbody');
-const playToggle = document.getElementById('playToggle');
 const mediaContainer = document.getElementById('mediaContainer');
 
 let schedule = [], currentItem = null, player = null;
@@ -146,17 +145,34 @@ async function handlePlaybackAtLoad(seekTo = null){
         }
       }
     }, 100);  const ext = currentItem.url.split('.').pop().toLowerCase();
+  const playerContainer = document.createElement('div');
+  playerContainer.className = 'custom-player';
+
   if(['mp4','webm','ogg'].includes(ext)){
     player = document.createElement('video');
-    player.width = 640; player.height = 360; player.controls = true;
+    player.width = 640; player.height = 360;
   } else {
     player = document.createElement('audio');
-    player.controls = true;
   }
 
+  // Remove default controls and add custom player UI
   player.preload = 'metadata';
   player.src = currentItem.url;
+  
+  // Create time display
+  const timeDisplay = document.createElement('div');
+  timeDisplay.className = 'time-display';
+  
+  // Update time display every second
+  player.addEventListener('timeupdate', () => {
+    const currentTime = formatDuration(Math.floor(player.currentTime));
+    const duration = formatDuration(Math.floor(player.duration));
+    timeDisplay.textContent = `${currentTime} / ${duration}`;
+  });
+
+  playerContainer.appendChild(timeDisplay);
   mediaContainer.appendChild(player);
+  mediaContainer.appendChild(playerContainer);
 
   showLoadingModal();
   
@@ -215,42 +231,28 @@ async function handlePlaybackAtLoad(seekTo = null){
     }
   });
 
-  try{
+  try {
     await player.play();
-    playToggle.textContent = 'Pause';
     statusEl.textContent = `Playing: ${currentItem.title || currentItem.url}`;
     setItemStatus(currentItem,'Playing');
-  }catch{
-    statusEl.textContent = 'Autoplay blocked — click Play to start.';
-    setItemStatus(currentItem,'Playing');
-    playToggle.textContent = 'Play';
-    // Show modal
+  } catch {
+    statusEl.textContent = 'Autoplay blocked - click Play to start';
+    setItemStatus(currentItem,'Waiting');
+    // Show the autoplay modal
     document.getElementById('autoplayModal').style.display = 'flex';
   }
 }
 
-playToggle.addEventListener('click', async ()=>{
-  if(!player){statusEl.textContent = 'No media loaded.';return;}
-  if(player.paused){
-    await player.play();
-    playToggle.textContent = 'Pause';
-    statusEl.textContent = 'Playing';
-    document.getElementById('autoplayModal').style.display = 'none';
-  }
-  else {
-    player.pause();
-    playToggle.textContent = 'Play';
-    statusEl.textContent = 'Paused';
-  }
-});
-
 // Modal play button handler
-document.getElementById('modalPlayBtn').addEventListener('click', async ()=>{
-  if(player && player.paused){
-    await player.play();
-    playToggle.textContent = 'Pause';
-    statusEl.textContent = 'Playing';
-    document.getElementById('autoplayModal').style.display = 'none';
+document.getElementById('modalPlayBtn').addEventListener('click', async () => {
+  if (player && player.paused) {
+    try {
+      await player.play();
+      statusEl.textContent = `Playing: ${currentItem.title || currentItem.url}`;
+      document.getElementById('autoplayModal').style.display = 'none';
+    } catch (err) {
+      statusEl.textContent = 'Failed to start playback';
+    }
   }
 });
 

@@ -189,14 +189,54 @@ button:hover {
   transition: background 0.3s, color 0.3s;
 }
 
-#mediaContainer audio, #mediaContainer video {
+.custom-player {
   width: 100%;
   max-width: 100%;
-  display: block;
-  margin: 0 auto;
   background: #222;
   border-radius: 8px;
   box-shadow: 0 2px 8px #0008;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+#mediaContainer audio, #mediaContainer video {
+  width: 1px;
+  height: 1px;
+  position: absolute;
+  opacity: 0;
+}
+
+.time-display {
+  color: #fff;
+  font-family: monospace;
+  font-size: 14px;
+  text-align: center;
+}
+
+.custom-play-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #4da6ff;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  display: none;  /* Hidden by default */
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.custom-play-btn.show {
+  display: flex;  /* Only show when .show class is added */
+}
+
+.custom-play-btn:hover {
+  background: #2196f3;
 }
 
 @media (max-width: 768px) {
@@ -211,10 +251,14 @@ button:hover {
     z-index: 98;
   }
   
-  #mediaContainer audio, #mediaContainer video {
+  .custom-player {
+    margin: 0;
     border-radius: 4px;
-    max-width: 100%;
-    margin-bottom: 0;
+    background: #181818;
+  }
+  
+  .time-display {
+    font-size: 12px;
   }
 }
 
