@@ -88,9 +88,13 @@ h1 {
     border: none;
     position: relative;
   }
+
+  /* Hide the index column on mobile */
+  #schedTable td:nth-child(1) {
+    display: none;
+  }
   
   /* Add labels for mobile view */
-  #schedTable td:nth-child(1)::before { content: "#: "; font-weight: bold; }
   #schedTable td:nth-child(2)::before { content: "Start: "; font-weight: bold; }
   #schedTable td:nth-child(3)::before { content: "Track: "; font-weight: bold; }
   #schedTable td:nth-child(4)::before { content: "Air Date: "; font-weight: bold; }
