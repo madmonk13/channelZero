@@ -46,8 +46,19 @@ function formatDuration(seconds) {
 const statusEl = document.getElementById('status');
 const tableBody = document.querySelector('#schedTable tbody');
 const mediaContainer = document.getElementById('mediaContainer');
+const muteButton = document.getElementById('muteButton');
 
 let schedule = [], currentItem = null, player = null;
+
+// Handle mute button click
+muteButton.addEventListener('click', () => {
+  if (player) {
+    player.muted = !player.muted;
+    muteButton.innerHTML = player.muted ? 
+      '<i class="fas fa-volume-mute"></i><span>Unmute</span>' : 
+      '<i class="fas fa-volume-up"></i><span>Mute</span>';
+  }
+});
 
 function renderTable() {
   tableBody.innerHTML = '';
