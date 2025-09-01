@@ -222,7 +222,7 @@ async function handlePlaybackAtLoad(seekTo = null){
     setItemStatus(currentItem,'Playing');
   }catch{
     statusEl.textContent = 'Autoplay blocked — click Play to start.';
-    setItemStatus(currentItem,'Ready');
+    setItemStatus(currentItem,'Playing');
     playToggle.textContent = 'Play';
     // Show modal
     document.getElementById('autoplayModal').style.display = 'flex';
