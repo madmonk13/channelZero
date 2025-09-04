@@ -10,10 +10,39 @@
   <div class="header-container">
     <h1>RFR Classic</h1>
   </div>
+
+  <div class="mobile-info">
+    <div class="mobile-now-playing">
+      <h3>Now Playing</h3>
+      <div class="mobile-episode-info">
+        <div id="mobileTitle">-</div>
+        <div id="mobileAirDate">Original Air Date: -</div>
+      </div>
+      <div class="progress-container">
+        <div id="progressBar" class="progress-bar"></div>
+      </div>
+      <div id="mobileTime" class="mobile-time">00:00</div>
+    </div>
+    
+    <div class="mobile-next">
+      <h3>Up Next</h3>
+      <div class="mobile-episode-info">
+        <div id="mobileNextTitle">-</div>
+        <div id="mobileNextAirDate">Original Air Date: -</div>
+      </div>
+    </div>
+  </div>
   
-  <div class="controls">
+  <div class="controls desktop-controls">
     <div id="status">Not loaded</div>
     <button id="muteButton" class="mute-button">
+      <i class="fas fa-volume-up"></i>
+      <span>Mute</span>
+    </button>
+  </div>
+
+  <div class="mobile-controls-fixed">
+    <button id="mobileMuteButton" class="mute-button mobile-mute">
       <i class="fas fa-volume-up"></i>
       <span>Mute</span>
     </button>

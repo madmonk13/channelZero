@@ -1,30 +1,56 @@
 const SCHEDULE_URL = './schedule.json';
 
 function parseSchedule(raw) {
-  // Generate schedule with start times based on durations, starting at midnight
-  const midnight = new Date();
-  midnight.setUTCHours(0,0,0,0);
-  let current = new Date(midnight);
-  return raw.map((it, i) => {
+  // Find the most recent Monday at midnight UTC
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setUTCHours(0, 0, 0, 0);
+  // Go back to the most recent Monday (0 = Sunday, 1 = Monday, etc)
+  while (monday.getUTCDay() !== 1) {
+    monday.setUTCDate(monday.getUTCDate() - 1);
+  }
+  
+  let current = new Date(monday);
+  // End time is the following Sunday at midnight
+  const endTime = new Date(monday);
+  endTime.setUTCDate(endTime.getUTCDate() + 7); // Add 7 days to get to next Monday
+  
+  let schedule = [];
+  let idx = 1;
+  let rawIndex = 0;
+  
+  while (current < endTime) {
+    const item = raw[rawIndex];
     const entry = {
-      idx: i+1,
-      url: it.url,
-      title: it.title || '',
+      idx: idx++,
+      url: item.url,
+      title: item.title || '',
       start: new Date(current),
-      duration: (typeof it.duration === 'number' && isFinite(it.duration)) ? it.duration : null,
-      airDate: it.airDate || '-'
+      duration: (typeof item.duration === 'number' && isFinite(item.duration)) ? item.duration : null,
+      airDate: item.airDate || '-'
     };
+    
+    schedule.push(entry);
+    
     if (entry.duration) {
       current = new Date(current.getTime() + entry.duration * 1000);
+    } else {
+      // If no duration, assume 30 minutes
+      current = new Date(current.getTime() + 30 * 60 * 1000);
     }
-    return entry;
-  });
+    
+    // Loop back to the beginning of the raw list when we reach the end
+    rawIndex = (rawIndex + 1) % raw.length;
+  }
+  
+  return schedule;
 }
 
 function formatUTC(d){
   // Display as local date and time in a human-friendly way, 12-hour format
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   return d.toLocaleString(undefined, {
-    year: 'numeric',
+    weekday: 'short',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
@@ -36,29 +62,47 @@ function formatUTC(d){
 }
 
 function formatDuration(seconds) {
-  if (typeof seconds !== 'number' || !isFinite(seconds)) return '00:00';
+  if (typeof seconds !== 'number' || !isFinite(seconds)) return '00:00:00';
   seconds = Math.floor(seconds);
-  const m = Math.floor(seconds / 60);
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
-  return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+  return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
 }
 
 const statusEl = document.getElementById('status');
 const tableBody = document.querySelector('#schedTable tbody');
 const mediaContainer = document.getElementById('mediaContainer');
 const muteButton = document.getElementById('muteButton');
+const mobileMuteButton = document.getElementById('mobileMuteButton');
+const mobileTitle = document.getElementById('mobileTitle');
+const mobileAirDate = document.getElementById('mobileAirDate');
+const mobileNextTitle = document.getElementById('mobileNextTitle');
+const mobileNextAirDate = document.getElementById('mobileNextAirDate');
+const progressBar = document.getElementById('progressBar');
+const mobileTime = document.getElementById('mobileTime');
 
 let schedule = [], currentItem = null, player = null;
 
-// Handle mute button click
-muteButton.addEventListener('click', () => {
+// Update status element
+function updateStatus(text) {
+  if (statusEl) statusEl.textContent = text;
+}
+
+// Handle mute button clicks for both desktop and mobile
+function handleMuteClick() {
   if (player) {
     player.muted = !player.muted;
-    muteButton.innerHTML = player.muted ? 
+    const newHTML = player.muted ? 
       '<i class="fas fa-volume-mute"></i><span>Unmute</span>' : 
       '<i class="fas fa-volume-up"></i><span>Mute</span>';
+    muteButton.innerHTML = newHTML;
+    mobileMuteButton.innerHTML = newHTML;
   }
-});
+}
+
+muteButton.addEventListener('click', handleMuteClick);
+mobileMuteButton.addEventListener('click', handleMuteClick);
 
 function renderTable() {
   tableBody.innerHTML = '';
@@ -66,6 +110,12 @@ function renderTable() {
     const tr = document.createElement('tr');
     tr.id = `row-${item.idx}`;
     tr.innerHTML = `<td>${item.idx}</td><td>${formatUTC(item.start)}</td><td>${item.title || item.url}</td><td>${item.airDate}</td><td id="st-${item.idx}">-</td>`;
+    
+    // If we have a current item, hide past episodes in desktop view
+    if (currentItem && item.idx < currentItem.idx) {
+      tr.classList.add('past-episode');
+    }
+    
     tableBody.appendChild(tr);
   });
 }
@@ -169,13 +219,39 @@ async function handlePlaybackAtLoad(seekTo = null){
   player.preload = 'metadata';
   player.src = currentItem.url;
   
-  // Update status with current time when playing
+  // Update status and progress when playing
   player.addEventListener('timeupdate', () => {
     if (currentItem && !player.paused) {
       const currentTime = formatDuration(Math.floor(player.currentTime));
       setItemStatus(currentItem, `Playing (${currentTime})`);
+      
+      // Update mobile progress
+      if (player.duration) {
+        const progress = (player.currentTime / player.duration) * 100;
+        progressBar.style.width = `${progress}%`;
+        mobileTime.textContent = currentTime;
+      }
     }
   });
+
+  // Update mobile view info
+  const updateMobileInfo = () => {
+    if (currentItem) {
+      mobileTitle.textContent = currentItem.title || currentItem.url;
+      mobileAirDate.textContent = `Original Air Date: ${currentItem.airDate}`;
+      
+      // Find next item
+      const currentIndex = schedule.findIndex(item => item.idx === currentItem.idx);
+      if (currentIndex > -1 && currentIndex < schedule.length - 1) {
+        const nextItem = schedule[currentIndex + 1];
+        mobileNextTitle.textContent = nextItem.title || nextItem.url;
+        mobileNextAirDate.textContent = `Original Air Date: ${nextItem.airDate}`;
+      }
+    }
+  };
+  
+  updateMobileInfo();
+  player.addEventListener('play', updateMobileInfo);
 
   mediaContainer.appendChild(player);
 
@@ -212,7 +288,11 @@ async function handlePlaybackAtLoad(seekTo = null){
     // Remove highlight from previous row
     if(currentItem && currentItem.idx) {
       const prevRow = document.getElementById(`row-${currentItem.idx}`);
-      if(prevRow) prevRow.classList.remove('highlight-current');
+      if(prevRow) {
+        prevRow.classList.remove('highlight-current');
+        // Add to past episodes in desktop view
+        prevRow.classList.add('past-episode');
+      }
     }
     if(idx >= 0 && idx < schedule.length - 1) {
       currentItem = schedule[idx + 1];
@@ -238,10 +318,17 @@ async function handlePlaybackAtLoad(seekTo = null){
 
   try {
     await player.play();
-    statusEl.textContent = `Playing: ${currentItem.title || currentItem.url}`;
+    updateStatus(`${currentItem.title || currentItem.url}`);
     setItemStatus(currentItem, `Playing (${formatDuration(0)})`);
+    // Update past episodes visibility when playback starts
+    document.querySelectorAll('#schedTable tbody tr').forEach(row => {
+      const rowId = parseInt(row.id.replace('row-', ''));
+      if (rowId < currentItem.idx) {
+        row.classList.add('past-episode');
+      }
+    });
   } catch {
-    statusEl.textContent = 'Autoplay blocked - click Play to start';
+    updateStatus('Click Play to start');
     setItemStatus(currentItem,'Waiting');
     // Show the autoplay modal
     document.getElementById('autoplayModal').style.display = 'flex';
@@ -253,11 +340,11 @@ document.getElementById('modalPlayBtn').addEventListener('click', async () => {
   if (player && player.paused) {
     try {
       await player.play();
-      statusEl.textContent = `Playing: ${currentItem.title || currentItem.url}`;
+      updateStatus(`Playing: ${currentItem.title || currentItem.url}`);
       setItemStatus(currentItem, `Playing (${formatDuration(player.currentTime)})`);
       document.getElementById('autoplayModal').style.display = 'none';
     } catch (err) {
-      statusEl.textContent = 'Failed to start playback';
+      updateStatus('Failed to start playback');
     }
   }
 });

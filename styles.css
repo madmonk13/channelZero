@@ -8,7 +8,8 @@ body {
   border-radius: 12px;
 }
 
-.controls {
+/* Desktop Controls */
+.desktop-controls {
   color: #fff;
   padding: 0.5rem 1rem;
   position: sticky;
@@ -21,6 +22,95 @@ body {
   backdrop-filter: blur(8px);
 }
 
+/* Mobile Info and Controls */
+.mobile-info {
+  display: none; /* Hidden by default */
+  background: #111;
+  color: #fff;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.mobile-controls-fixed {
+  display: none; /* Hidden by default */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #000;
+  color: #fff;
+  padding: 12px;
+  z-index: 1000;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.5);
+}
+
+.mobile-mute {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  justify-content: center;
+}
+
+.mobile-now-playing, .mobile-next {
+  margin-bottom: 16px;
+}
+
+.mobile-now-playing h3, .mobile-next h3 {
+  font-size: 14px;
+  color: #888;
+  margin: 0 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.mobile-episode-info {
+  margin-bottom: 12px;
+}
+
+.mobile-episode-info div:first-child {
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.mobile-episode-info div:last-child {
+  font-size: 14px;
+  color: #888;
+}
+
+.progress-container {
+  width: 100%;
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  margin: 12px 0 4px 0;
+}
+
+.progress-bar {
+  width: 0%;
+  height: 100%;
+  background: #4da6ff;
+  border-radius: 2px;
+  transition: width 0.5s linear;
+}
+
+.mobile-time {
+  font-size: 14px;
+  color: #888;
+  text-align: center;
+  margin-top: 8px;
+  font-family: monospace;
+}
+
+.mobile-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #333;
+}
+
+/* Mute Button Styles */
 .mute-button {
   background: #4da6ff;
   border: none;
@@ -42,6 +132,14 @@ body {
   font-size: 16px;
 }
 
+/* Past Episodes (Desktop Only) */
+@media (min-width: 769px) {
+  .past-episode {
+    display: none;
+  }
+}
+
+/* Mobile Responsive Rules */
 @media (max-width: 768px) {
   body {
     margin: 0;
@@ -57,11 +155,38 @@ body {
     z-index: 100;
     border-bottom: 1px solid #222;
   }
+
+  .controls.desktop-controls {
+    display: none; /* Hide desktop controls on mobile */
+  }
+  
+  .mobile-info {
+    display: block; /* Show mobile info on mobile */
+  }
+
+  .mobile-controls-fixed {
+    display: flex; /* Show mobile controls on mobile */
+  }
+
+  .schedTable-container {
+    display: none; /* Hide schedule table on mobile */
+  }
+
+  #status {
+    display: none; /* Hide desktop status on mobile */
+  }
+
+  .content-container {
+    padding-bottom: 80px; /* Space for fixed controls */
+  }
 }
 
 h1 {
   margin-top: 0;
   color: #fff;
+  text-align: center;
+  margin: 3vh;
+
 }
 
 .schedTable-container {
@@ -75,15 +200,8 @@ h1 {
 }
 
 @media (max-width: 768px) {
-  .schedTable-container {
-    max-height: none;
-    margin: 0;
-    border: none;
-    padding-top: 12px;
-  }
-
   .content-container {
-    padding-bottom: 120px; /* Space for player */
+    padding-bottom: 220px; /* Space for mobile player */
   }
 }
 
@@ -188,33 +306,6 @@ button:hover {
   display: flex;
   gap: 8px;
   align-items: center;
-}
-
-@media (max-width: 768px) {
-  .controls {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-    position: sticky;
-    top: 78px; /* Height of header + padding */
-    background: #000;
-    padding: 12px;
-    margin-top: 0;
-    z-index: 99;
-    border-bottom: 1px solid #222;
-  }
-  
-  .controls button {
-    padding: 12px;
-    font-size: 16px;
-  }
-  
-  #status {
-    text-align: center;
-    background: #111;
-    padding: 8px;
-    border-radius: 4px;
-  }
 }
 
 .highlight-current {
