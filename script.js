@@ -81,6 +81,8 @@ const mobileNextTitle = document.getElementById('mobileNextTitle');
 const mobileNextAirDate = document.getElementById('mobileNextAirDate');
 const progressBar = document.getElementById('progressBar');
 const mobileTime = document.getElementById('mobileTime');
+const desktopProgressBar = document.getElementById('desktopProgressBar');
+const desktopTime = document.getElementById('desktopTime');
 
 let schedule = [], currentItem = null, player = null;
 
@@ -118,6 +120,35 @@ function renderTable() {
     
     tableBody.appendChild(tr);
   });
+}
+
+// Helper function to scroll to current episode
+function scrollToCurrentEpisode(smooth = true) {
+  if (!currentItem) return;
+  
+  const row = document.getElementById(`row-${currentItem.idx}`);
+  if (!row) return;
+
+  // Only auto-scroll in desktop view
+  if (window.innerWidth > 768) {
+    const header = document.querySelector('.header-container');
+    const controls = document.querySelector('.controls.desktop-controls');
+    const offset = header.offsetHeight + controls.offsetHeight;
+
+    const scrollOptions = {
+      behavior: smooth ? 'smooth' : 'auto',
+      block: 'nearest',
+    };
+
+    // Calculate the target scroll position
+    const rowRect = row.getBoundingClientRect();
+    const targetScroll = window.scrollY + rowRect.top - offset - 20; // 20px padding
+
+    window.scrollTo({
+      top: targetScroll,
+      behavior: smooth ? 'smooth' : 'auto'
+    });
+  }
 }
 
 function findCurrent(now = new Date()){
@@ -225,11 +256,15 @@ async function handlePlaybackAtLoad(seekTo = null){
       const currentTime = formatDuration(Math.floor(player.currentTime));
       setItemStatus(currentItem, `Playing (${currentTime})`);
       
-      // Update mobile progress
+      // Update progress bars
       if (player.duration) {
         const progress = (player.currentTime / player.duration) * 100;
+        // Update mobile progress
         progressBar.style.width = `${progress}%`;
         mobileTime.textContent = currentTime;
+        // Update desktop progress
+        desktopProgressBar.style.width = `${progress}%`;
+        desktopTime.textContent = currentTime;
       }
     }
   });
@@ -296,6 +331,8 @@ async function handlePlaybackAtLoad(seekTo = null){
     }
     if(idx >= 0 && idx < schedule.length - 1) {
       currentItem = schedule[idx + 1];
+      // Scroll to next episode immediately
+      scrollToCurrentEpisode(true);
       // Scroll to next and play
       setTimeout(() => {
         const row = document.getElementById(`row-${currentItem.idx}`);
@@ -327,6 +364,8 @@ async function handlePlaybackAtLoad(seekTo = null){
         row.classList.add('past-episode');
       }
     });
+    // Scroll to current episode
+    scrollToCurrentEpisode();
   } catch {
     updateStatus('Click Play to start');
     setItemStatus(currentItem,'Waiting');

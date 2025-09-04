@@ -1,11 +1,22 @@
 body {
   font-family: sans-serif;
   max-width: 1200px;
-  margin: 28px auto;
+  margin: 0 auto;
   padding: 18px;
   background: #000;
   color: #fff;
-  border-radius: 12px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 769px) {
+  body {
+    margin: 28px auto;
+    border-radius: 12px;
+    height: calc(100vh - 56px); /* Account for top and bottom margin */
+    min-height: auto;
+  }
 }
 
 /* Desktop Controls */
@@ -189,14 +200,45 @@ h1 {
 
 }
 
+.content-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .schedTable-container {
-  max-height: 600px;
+  flex: 1;
   overflow-y: auto;
   border-radius: 8px;
   box-shadow: 0 2px 8px #0008;
   margin-top: 12px;
   background: #181818;
   border: 2px solid #4da6ff;
+  min-height: 0;
+  margin-bottom: 12px;
+}
+
+/* Desktop Progress Bar */
+.desktop-progress {
+  display: none;
+  padding: 0 12px 12px 12px;
+  background: #181818;
+  border-radius: 8px;
+}
+
+@media (min-width: 769px) {
+  .desktop-progress {
+    display: block;
+  }
+}
+
+.desktop-time {
+  font-size: 14px;
+  color: #888;
+  text-align: center;
+  margin-top: 8px;
+  font-family: monospace;
 }
 
 @media (max-width: 768px) {
