@@ -280,6 +280,12 @@ async function handlePlaybackAtLoad(seekTo = null){
   const playerContainer = document.createElement('div');
   playerContainer.className = 'custom-player';
 
+  // Clean up old player if it exists
+  if (player) {
+    player.pause();
+    player.remove();
+  }
+
   if(['mp4','webm','ogg'].includes(ext)){
     player = document.createElement('video');
     player.width = 640; player.height = 360;
@@ -287,8 +293,26 @@ async function handlePlaybackAtLoad(seekTo = null){
     player = document.createElement('audio');
   }
 
-  // Remove default controls and add custom player UI
-  player.preload = 'metadata';
+  // Set up error handling
+  player.onerror = (e) => {
+    console.error('Media Error:', e);
+    console.error('Error code:', player.error ? player.error.code : 'unknown');
+    console.error('Error message:', player.error ? player.error.message : 'unknown');
+    console.error('Source URL:', currentItem.url);
+    updateStatus('Media error: Unable to load audio. Please try again.');
+  };
+
+  // Add source with proper type
+  const source = document.createElement('source');
+  source.src = currentItem.url;
+  source.type = ['mp4','webm','ogg'].includes(ext) ? `video/${ext}` : 'audio/mpeg';
+  
+  // Set attributes for better compatibility
+  player.crossOrigin = 'anonymous';
+  player.preload = 'auto';
+  
+  // Append source and set src as fallback
+  player.appendChild(source);
   player.src = currentItem.url;
   
   // Update status and progress when playing
@@ -414,16 +438,52 @@ async function handlePlaybackAtLoad(seekTo = null){
 
 // Modal play button handler
 document.getElementById('modalPlayBtn').addEventListener('click', async () => {
-  if (player && player.paused) {
+  console.log('Modal play button clicked');
+  
+  if (player) {
     try {
+      // Make sure media is loaded
+      if (player.readyState === 0) {
+        console.log('Loading media...');
+        await new Promise((resolve, reject) => {
+          player.addEventListener('loadedmetadata', resolve, { once: true });
+          player.addEventListener('error', reject, { once: true });
+          // Reload media if needed
+          player.load();
+        });
+      }
+      
+      console.log('Attempting to play');
       await player.play();
+      console.log('Play successful');
+      
       updateStatus(`Playing: ${currentItem.title || currentItem.url}`, currentItem.airDate);
       setItemStatus(currentItem, `Playing (${formatDuration(player.currentTime)})`);
       document.getElementById('autoplayModal').style.display = 'none';
     } catch (err) {
-      updateStatus('Failed to start playback');
+      console.error('Playback failed:', err);
+      if (err.name === 'NotSupportedError') {
+        updateStatus('Error: Media format not supported by your browser');
+      } else if (err.name === 'NotAllowedError') {
+        updateStatus('Error: Playback not allowed. Please try again.');
+      } else {
+        updateStatus(`Error: ${err.message || 'Failed to start playback'}`);
+      }
+      console.error('Detailed error:', err);
     }
+  } else {
+    console.error('No player available');
+    updateStatus('Error: Media player not initialized');
   }
+});
+
+// Add touch event handler for mobile
+document.getElementById('modalPlayBtn').addEventListener('touchend', async (e) => {
+  e.preventDefault(); // Prevent any default touch behavior
+  const btn = e.currentTarget;
+  
+  // Trigger click event
+  btn.click();
 });
 
 tryLoadSchedule();
