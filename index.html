@@ -34,7 +34,13 @@
   </div>
   
   <div class="controls desktop-controls">
-    <div id="status">Not loaded</div>
+    <div class="desktop-now-playing">
+      <div id="status">Not loaded</div>
+      <div class="progress-container">
+        <div id="desktopProgressBar" class="progress-bar"></div>
+      </div>
+      <div id="desktopTime" class="time">00:00:00</div>
+    </div>
     <button id="muteButton" class="mute-button">
       <i class="fas fa-volume-up"></i>
       <span>Mute</span>
@@ -56,12 +62,6 @@
         </thead>
         <tbody></tbody>
       </table>
-    </div>
-    <div class="desktop-progress">
-      <div class="progress-container">
-        <div id="desktopProgressBar" class="progress-bar"></div>
-      </div>
-      <div id="desktopTime" class="desktop-time">00:00:00</div>
     </div>
   </div>
 

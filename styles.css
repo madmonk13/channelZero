@@ -28,9 +28,19 @@ body {
   z-index: 100;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   background: transparent;
   backdrop-filter: blur(8px);
+}
+
+.desktop-now-playing {
+  flex-grow: 1;
+  margin-right: 20px;
+}
+
+#status {
+  margin-bottom: 8px;
+  font-size: 16px;
 }
 
 /* Mobile Info and Controls */
@@ -93,7 +103,13 @@ body {
   height: 4px;
   background: #333;
   border-radius: 2px;
-  margin: 12px 0 4px 0;
+  margin: 8px 0 4px 0;
+}
+
+.time {
+  font-size: 12px;
+  color: #888;
+  text-align: right;
 }
 
 .progress-bar {

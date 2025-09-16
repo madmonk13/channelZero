@@ -9,6 +9,26 @@ function parseSchedule(raw) {
   while (monday.getUTCDay() !== 1) {
     monday.setUTCDate(monday.getUTCDate() - 1);
   }
+
+  // Calculate which week of the month we're in (1-based)
+  const firstDayOfMonth = new Date(monday);
+  firstDayOfMonth.setUTCDate(1);
+  // Get the first Monday of the month
+  while (firstDayOfMonth.getUTCDay() !== 1) {
+    firstDayOfMonth.setUTCDate(firstDayOfMonth.getUTCDate() + 1);
+  }
+  // Calculate week number (1-based)
+  const weekOfMonth = Math.ceil((monday.getUTCDate() - firstDayOfMonth.getUTCDate()) / 7) + 1;
+  
+  // Calculate total weeks in the month
+  const lastDayOfMonth = new Date(monday);
+  lastDayOfMonth.setUTCMonth(lastDayOfMonth.getUTCMonth() + 1, 0); // Last day of current month
+  const totalWeeks = Math.ceil((lastDayOfMonth.getUTCDate() - firstDayOfMonth.getUTCDate() + 1) / 7);
+  
+  // Calculate the offset based on week number
+  const totalEpisodes = raw.length;
+  const episodesPerWeek = Math.floor(totalEpisodes / totalWeeks);
+  const weekOffset = (weekOfMonth - 1) * episodesPerWeek;
   
   let current = new Date(monday);
   // End time is the following Sunday at midnight
@@ -17,7 +37,8 @@ function parseSchedule(raw) {
   
   let schedule = [];
   let idx = 1;
-  let rawIndex = 0;
+  // Start from the week's offset
+  let rawIndex = weekOffset % raw.length;
   
   while (current < endTime) {
     const item = raw[rawIndex];
@@ -87,8 +108,14 @@ const desktopTime = document.getElementById('desktopTime');
 let schedule = [], currentItem = null, player = null;
 
 // Update status element
-function updateStatus(text) {
-  if (statusEl) statusEl.textContent = text;
+function updateStatus(text, airDate) {
+  if (statusEl) {
+    if (airDate) {
+      statusEl.textContent = `${text} (Original Air Date: ${airDate})`;
+    } else {
+      statusEl.textContent = text;
+    }
+  }
 }
 
 // Handle mute button clicks for both desktop and mobile
@@ -106,14 +133,28 @@ function handleMuteClick() {
 muteButton.addEventListener('click', handleMuteClick);
 mobileMuteButton.addEventListener('click', handleMuteClick);
 
+function getVisibleEpisodes() {
+  if (!currentItem || !schedule.length) return schedule;
+  
+  const currentIndex = schedule.findIndex(item => item.idx === currentItem.idx);
+  if (currentIndex === -1) return schedule;
+
+  // Get previous episode (if exists), current episode, and next 8 episodes
+  const startIndex = Math.max(0, currentIndex - 1);
+  const endIndex = Math.min(schedule.length, currentIndex + 9); // current + 8 next = 9
+  return schedule.slice(startIndex, endIndex);
+}
+
 function renderTable() {
   tableBody.innerHTML = '';
-  schedule.forEach(item=>{
+  const visibleEpisodes = getVisibleEpisodes();
+  
+  visibleEpisodes.forEach(item => {
     const tr = document.createElement('tr');
     tr.id = `row-${item.idx}`;
     tr.innerHTML = `<td>${item.idx}</td><td>${formatUTC(item.start)}</td><td>${item.title || item.url}</td><td>${item.airDate}</td><td id="st-${item.idx}">-</td>`;
     
-    // If we have a current item, hide past episodes in desktop view
+    // If we have a current item, style past episodes differently
     if (currentItem && item.idx < currentItem.idx) {
       tr.classList.add('past-episode');
     }
@@ -331,6 +372,8 @@ async function handlePlaybackAtLoad(seekTo = null){
     }
     if(idx >= 0 && idx < schedule.length - 1) {
       currentItem = schedule[idx + 1];
+      // Re-render table to show new episode window
+      renderTable();
       // Scroll to next episode immediately
       scrollToCurrentEpisode(true);
       // Scroll to next and play
@@ -342,7 +385,7 @@ async function handlePlaybackAtLoad(seekTo = null){
         }
       }, 100);
       // Play next from beginning
-      statusEl.textContent = `Preparing '${currentItem.url}' — scheduled ${formatUTC(currentItem.start)}`;
+      updateStatus(`Preparing '${currentItem.title || currentItem.url}' — scheduled ${formatUTC(currentItem.start)}`, currentItem.airDate);
       setItemStatus(currentItem,'Loading');
       mediaContainer.innerHTML = '';
       // Always start at beginning for next track
@@ -355,15 +398,10 @@ async function handlePlaybackAtLoad(seekTo = null){
 
   try {
     await player.play();
-    updateStatus(`${currentItem.title || currentItem.url}`);
+    updateStatus(`${currentItem.title || currentItem.url}`, currentItem.airDate);
     setItemStatus(currentItem, `Playing (${formatDuration(0)})`);
-    // Update past episodes visibility when playback starts
-    document.querySelectorAll('#schedTable tbody tr').forEach(row => {
-      const rowId = parseInt(row.id.replace('row-', ''));
-      if (rowId < currentItem.idx) {
-        row.classList.add('past-episode');
-      }
-    });
+    // Re-render table to show correct episode window
+    renderTable();
     // Scroll to current episode
     scrollToCurrentEpisode();
   } catch {
@@ -379,7 +417,7 @@ document.getElementById('modalPlayBtn').addEventListener('click', async () => {
   if (player && player.paused) {
     try {
       await player.play();
-      updateStatus(`Playing: ${currentItem.title || currentItem.url}`);
+      updateStatus(`Playing: ${currentItem.title || currentItem.url}`, currentItem.airDate);
       setItemStatus(currentItem, `Playing (${formatDuration(player.currentTime)})`);
       document.getElementById('autoplayModal').style.display = 'none';
     } catch (err) {
