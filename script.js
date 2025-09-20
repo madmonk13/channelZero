@@ -67,6 +67,18 @@ function parseSchedule(raw) {
   return schedule;
 }
 
+// Format a date in a human-readable way
+function formatAirDate(dateString) {
+  const date = new Date(dateString);
+  const options = { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric',
+    timeZone: 'UTC'  // Use UTC to avoid timezone conversion
+  };
+  return date.toLocaleDateString(undefined, options);
+}
+
 function formatUTC(d){
   // Display as local date and time in a human-friendly way, 12-hour format
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -111,7 +123,8 @@ let schedule = [], currentItem = null, player = null;
 function updateStatus(text, airDate) {
   if (statusEl) {
     if (airDate) {
-      statusEl.textContent = `${text} (Original Air Date: ${airDate})`;
+      const formattedDate = formatAirDate(airDate);
+      statusEl.textContent = `${text} (Original Air Date: ${formattedDate})`;
     } else {
       statusEl.textContent = text;
     }
@@ -152,7 +165,7 @@ function renderTable() {
   visibleEpisodes.forEach(item => {
     const tr = document.createElement('tr');
     tr.id = `row-${item.idx}`;
-    tr.innerHTML = `<td>${item.idx}</td><td>${formatUTC(item.start)}</td><td>${item.title || item.url}</td><td>${item.airDate}</td><td id="st-${item.idx}">-</td>`;
+    tr.innerHTML = `<td>${item.idx}</td><td>${formatUTC(item.start)}</td><td>${item.title || item.url}</td><td>${formatAirDate(item.airDate)}</td><td id="st-${item.idx}">-</td>`;
     
     // If we have a current item, style past episodes differently
     if (currentItem && item.idx < currentItem.idx) {
@@ -338,7 +351,7 @@ async function handlePlaybackAtLoad(seekTo = null){
   const updateMobileInfo = () => {
     if (currentItem) {
       mobileTitle.textContent = currentItem.title || currentItem.url;
-      mobileAirDate.textContent = `Original Air Date: ${currentItem.airDate}`;
+      mobileAirDate.textContent = `Original Air Date: ${formatAirDate(currentItem.airDate)}`;
       
       // Find next item
       const currentIndex = schedule.findIndex(item => item.idx === currentItem.idx);
