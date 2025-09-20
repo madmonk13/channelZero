@@ -1,0 +1,1442 @@
+// Media Player Manager// Media Player Manager// Media Player Manager
+
+class MediaPlayerManager {
+
+  constructor() {class MediaPlayerManager {class MediaPlayerManager {
+
+    this.SCHEDULE_URL = './schedule.json';
+
+    this.schedule = [];  constructor() {  constructor() {
+
+    this.currentItem = null;
+
+    this.player = null;    this.SCHEDULE_URL = './schedule.json';    this.SCHEDULE_URL = './schedule.json';
+
+    
+
+    // Initialize DOM elements    this.schedule = [];    this.schedule = [];
+
+    this.elements = {
+
+      status: document.getElementById('status'),    this.currentItem = null;    this.currentItem = null;
+
+      tableBody: document.querySelector('#schedTable tbody'),
+
+      mediaContainer: document.getElementById('mediaContainer'),    this.player = null;    this.player = null;
+
+      muteButton: document.getElementById('muteButton'),
+
+      mobileMuteButton: document.getElementById('mobileMuteButton'),        
+
+      mobileTitle: document.getElementById('mobileTitle'),
+
+      mobileAirDate: document.getElementById('mobileAirDate'),    // Initialize DOM elements    // DOM Elements
+
+      mobileNextTitle: document.getElementById('mobileNextTitle'),
+
+      mobileNextAirDate: document.getElementById('mobileNextAirDate'),    this.elements = {    this.elements = {
+
+      progressBar: document.getElementById('progressBar'),
+
+      mobileTime: document.getElementById('mobileTime'),      status: document.getElementById('status'),      status: document.getElementById('status'),
+
+      desktopProgressBar: document.getElementById('desktopProgressBar'),
+
+      desktopTime: document.getElementById('desktopTime'),      tableBody: document.querySelector('#schedTable tbody'),      tableBody: document.querySelector('#schedTable tbody'),
+
+      autoplayModal: document.getElementById('autoplayModal'),
+
+      modalPlayBtn: document.getElementById('modalPlayBtn'),      mediaContainer: document.getElementById('mediaContainer'),      mediaContainer: document.getElementById('mediaContainer'),
+
+      loadingModal: document.getElementById('loadingModal')
+
+    };      muteButton: document.getElementById('muteButton'),      muteButton: document.getElementById('muteButton'),
+
+
+
+    // Bind event handlers      mobileMuteButton: document.getElementById('mobileMuteButton'),      mobileMuteButton: document.getElementById('mobileMuteButton'),
+
+    this.handleMute = this.handleMute.bind(this);
+
+    this.handleModalPlay = this.handleModalPlay.bind(this);      mobileTitle: document.getElementById('mobileTitle'),      mobileTitle: document.getElementById('mobileTitle'),
+
+
+
+    this.elements.muteButton.addEventListener('click', this.handleMute);      mobileAirDate: document.getElementById('mobileAirDate'),      mobileAirDate: document.getElementById('mobileAirDate'),
+
+    this.elements.mobileMuteButton.addEventListener('click', this.handleMute);
+
+    this.elements.modalPlayBtn.addEventListener('click', this.handleModalPlay);      mobileNextTitle: document.getElementById('mobileNextTitle'),      mobileNextTitle: document.getElementById('mobileNextTitle'),
+
+    this.elements.modalPlayBtn.addEventListener('touchend', (e) => {
+
+      e.preventDefault();      mobileNextAirDate: document.getElementById('mobileNextAirDate'),      mobileNextAirDate: document.getElementById('mobileNextAirDate'),
+
+      e.currentTarget.click();
+
+    });      progressBar: document.getElementById('progressBar'),      progressBar: document.getElementById('progressBar'),
+
+  }
+
+      mobileTime: document.getElementById('mobileTime'),      mobileTime: document.getElementById('mobileTime'),
+
+  formatAirDate(dateString) {
+
+    const date = new Date(dateString);      desktopProgressBar: document.getElementById('desktopProgressBar'),      desktopProgressBar: document.getElementById('desktopProgressBar'),
+
+    const options = { 
+
+      year: 'numeric',       desktopTime: document.getElementById('desktopTime'),      desktopTime: document.getElementById('desktopTime'),
+
+      month: 'long', 
+
+      day: 'numeric',      autoplayModal: document.getElementById('autoplayModal'),      autoplayModal: document.getElementById('autoplayModal'),
+
+      timeZone: 'UTC'
+
+    };      modalPlayBtn: document.getElementById('modalPlayBtn'),      modalPlayBtn: document.getElementById('modalPlayBtn')
+
+    return date.toLocaleDateString(undefined, options);
+
+  }      loadingModal: document.getElementById('loadingModal')    };
+
+
+
+  formatUTC(date) {    };
+
+    return date.toLocaleString(undefined, {
+
+      weekday: 'short',    // Bind event handlers
+
+      month: 'short',
+
+      day: 'numeric',    // Bind event handlers    this.elements.muteButton.addEventListener('click', () => this.handleMute());
+
+      hour: '2-digit',
+
+      minute: '2-digit',    this.handleMute = this.handleMute.bind(this);    this.elements.mobileMuteButton.addEventListener('click', () => this.handleMute());
+
+      second: '2-digit',
+
+      hour12: true,    this.handleModalPlay = this.handleModalPlay.bind(this);    this.elements.modalPlayBtn.addEventListener('click', () => this.handleModalPlay());
+
+      timeZoneName: 'short'
+
+    });    this.elements.modalPlayBtn.addEventListener('touchend', (e) => {
+
+  }
+
+    this.elements.muteButton.addEventListener('click', this.handleMute);      e.preventDefault();
+
+  formatDuration(seconds) {
+
+    if (typeof seconds !== 'number' || !isFinite(seconds)) return '00:00:00';    this.elements.mobileMuteButton.addEventListener('click', this.handleMute);      e.currentTarget.click();
+
+    seconds = Math.floor(seconds);
+
+    const h = Math.floor(seconds / 3600);    this.elements.modalPlayBtn.addEventListener('click', this.handleModalPlay);    });
+
+    const m = Math.floor((seconds % 3600) / 60);
+
+    const s = seconds % 60;    this.elements.modalPlayBtn.addEventListener('touchend', (e) => {  }
+
+    return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+
+  }      e.preventDefault();
+
+
+
+  updateStatus(text, airDate) {      e.currentTarget.click();  findCurrent(now = new Date()) {
+
+    if (this.elements.status) {
+
+      if (airDate) {    });  for (const it of schedule) {
+
+        const formattedDate = this.formatAirDate(airDate);
+
+        this.elements.status.textContent = `${text} (Original Air Date: ${formattedDate})`;  }    if (it.duration != null) {
+
+      } else {
+
+        this.elements.status.textContent = text;      const end = new Date(it.start.getTime() + it.duration * 1000);
+
+      }
+
+    }  // Utility Methods      if (now >= it.start && now < end) {
+
+  }
+
+  formatAirDate(dateString) {        return { item: it, elapsed: (now - it.start) / 1000 };
+
+  setItemStatus(item, text) {
+
+    const el = document.getElementById(`st-${item.idx}`);    const date = new Date(dateString);      }
+
+    if (el) el.textContent = text;
+
+  }    const options = {     }
+
+
+
+  showLoadingModal() {      year: 'numeric',   }
+
+    this.elements.loadingModal.style.display = 'flex';
+
+  }      month: 'long',   
+
+
+
+  hideLoadingModal() {      day: 'numeric',  const candidates = schedule.filter(it => now >= it.start && it.duration == null);
+
+    this.elements.loadingModal.style.display = 'none';
+
+  }      timeZone: 'UTC'  if (candidates.length) {
+
+
+
+  parseSchedule(raw) {    };    const it = candidates[candidates.length - 1];
+
+    const now = new Date();
+
+    const monday = new Date(now);    return date.toLocaleDateString(undefined, options);    return { item: it, elapsed: (now - it.start) / 1000 };
+
+    monday.setUTCHours(0, 0, 0, 0);
+
+      }  }
+
+    while (monday.getUTCDay() !== 1) {
+
+      monday.setUTCDate(monday.getUTCDate() - 1);  return null;
+
+    }
+
+  formatUTC(date) {}
+
+    const firstDayOfMonth = new Date(monday);
+
+    firstDayOfMonth.setUTCDate(1);    return date.toLocaleString(undefined, {
+
+    
+
+    while (firstDayOfMonth.getUTCDay() !== 1) {      weekday: 'short',  parseSchedule(raw) {
+
+      firstDayOfMonth.setUTCDate(firstDayOfMonth.getUTCDate() + 1);
+
+    }      month: 'short',    // Find the most recent Monday at midnight UTC
+
+    
+
+    const weekOfMonth = Math.ceil((monday.getUTCDate() - firstDayOfMonth.getUTCDate()) / 7) + 1;      day: 'numeric',  const now = new Date();
+
+    const lastDayOfMonth = new Date(monday);
+
+    lastDayOfMonth.setUTCMonth(lastDayOfMonth.getUTCMonth() + 1, 0);      hour: '2-digit',  const monday = new Date(now);
+
+    const totalWeeks = Math.ceil((lastDayOfMonth.getUTCDate() - firstDayOfMonth.getUTCDate() + 1) / 7);
+
+          minute: '2-digit',  monday.setUTCHours(0, 0, 0, 0);
+
+    const totalEpisodes = raw.length;
+
+    const episodesPerWeek = Math.floor(totalEpisodes / totalWeeks);      second: '2-digit',  // Go back to the most recent Monday (0 = Sunday, 1 = Monday, etc)
+
+    const weekOffset = (weekOfMonth - 1) * episodesPerWeek;
+
+          hour12: true,  while (monday.getUTCDay() !== 1) {
+
+    let current = new Date(monday);
+
+    const endTime = new Date(monday);      timeZoneName: 'short'    monday.setUTCDate(monday.getUTCDate() - 1);
+
+    endTime.setUTCDate(endTime.getUTCDate() + 7);
+
+        });  }
+
+    const schedule = [];
+
+    let idx = 1;  }
+
+    let rawIndex = weekOffset % raw.length;
+
+      // Calculate which week of the month we're in (1-based)
+
+    while (current < endTime) {
+
+      const item = raw[rawIndex];  formatDuration(seconds) {  const firstDayOfMonth = new Date(monday);
+
+      const entry = {
+
+        idx: idx++,    if (typeof seconds !== 'number' || !isFinite(seconds)) return '00:00:00';  firstDayOfMonth.setUTCDate(1);
+
+        url: item.url,
+
+        title: item.title || '',    seconds = Math.floor(seconds);  // Get the first Monday of the month
+
+        start: new Date(current),
+
+        duration: (typeof item.duration === 'number' && isFinite(item.duration)) ? item.duration : null,    const h = Math.floor(seconds / 3600);  while (firstDayOfMonth.getUTCDay() !== 1) {
+
+        airDate: item.airDate || '-'
+
+      };    const m = Math.floor((seconds % 3600) / 60);    firstDayOfMonth.setUTCDate(firstDayOfMonth.getUTCDate() + 1);
+
+      
+
+      schedule.push(entry);    const s = seconds % 60;  }
+
+      
+
+      if (entry.duration) {    return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;  // Calculate week number (1-based)
+
+        current = new Date(current.getTime() + entry.duration * 1000);
+
+      } else {  }  const weekOfMonth = Math.ceil((monday.getUTCDate() - firstDayOfMonth.getUTCDate()) / 7) + 1;
+
+        current = new Date(current.getTime() + 30 * 60 * 1000);
+
+      }  
+
+      
+
+      rawIndex = (rawIndex + 1) % raw.length;  // UI Update Methods  // Calculate total weeks in the month
+
+    }
+
+      updateStatus(text, airDate) {  const lastDayOfMonth = new Date(monday);
+
+    return schedule;
+
+  }    if (this.elements.status) {  lastDayOfMonth.setUTCMonth(lastDayOfMonth.getUTCMonth() + 1, 0); // Last day of current month
+
+
+
+  findCurrent(now = new Date()) {      if (airDate) {  const totalWeeks = Math.ceil((lastDayOfMonth.getUTCDate() - firstDayOfMonth.getUTCDate() + 1) / 7);
+
+    for (const it of this.schedule) {
+
+      if (it.duration != null) {        const formattedDate = this.formatAirDate(airDate);  
+
+        const end = new Date(it.start.getTime() + it.duration * 1000);
+
+        if (now >= it.start && now < end) {        this.elements.status.textContent = `${text} (Original Air Date: ${formattedDate})`;  // Calculate the offset based on week number
+
+          return { item: it, elapsed: (now - it.start) / 1000 };
+
+        }      } else {  const totalEpisodes = raw.length;
+
+      }
+
+    }        this.elements.status.textContent = text;  const episodesPerWeek = Math.floor(totalEpisodes / totalWeeks);
+
+    
+
+    const candidates = this.schedule.filter(it => now >= it.start && it.duration == null);      }  const weekOffset = (weekOfMonth - 1) * episodesPerWeek;
+
+    if (candidates.length) {
+
+      const it = candidates[candidates.length - 1];    }  
+
+      return { item: it, elapsed: (now - it.start) / 1000 };
+
+    }  }  let current = new Date(monday);
+
+    return null;
+
+  }  // End time is the following Sunday at midnight
+
+
+
+  renderTable() {  setItemStatus(item, text) {  const endTime = new Date(monday);
+
+    this.elements.tableBody.innerHTML = '';
+
+    const visibleEpisodes = this.getVisibleEpisodes();    const el = document.getElementById(`st-${item.idx}`);  endTime.setUTCDate(endTime.getUTCDate() + 7); // Add 7 days to get to next Monday
+
+    
+
+    visibleEpisodes.forEach(item => {    if (el) el.textContent = text;  
+
+      const tr = document.createElement('tr');
+
+      tr.id = `row-${item.idx}`;  }  let schedule = [];
+
+      tr.innerHTML = `
+
+        <td>${item.idx}</td>  let idx = 1;
+
+        <td>${this.formatUTC(item.start)}</td>
+
+        <td>${item.title || item.url}</td>  showLoadingModal() {  // Start from the week's offset
+
+        <td>${this.formatAirDate(item.airDate)}</td>
+
+        <td id="st-${item.idx}">-</td>    this.elements.loadingModal.style.display = 'flex';  let rawIndex = weekOffset % raw.length;
+
+      `;
+
+        }  
+
+      if (this.currentItem && item.idx < this.currentItem.idx) {
+
+        tr.classList.add('past-episode');  while (current < endTime) {
+
+      }
+
+        hideLoadingModal() {    const item = raw[rawIndex];
+
+      this.elements.tableBody.appendChild(tr);
+
+    });    this.elements.loadingModal.style.display = 'none';    const entry = {
+
+  }
+
+  }      idx: idx++,
+
+  getVisibleEpisodes() {
+
+    if (!this.currentItem || !this.schedule.length) return this.schedule;      url: item.url,
+
+    
+
+    const currentIndex = this.schedule.findIndex(item => item.idx === this.currentItem.idx);  // Schedule Methods      title: item.title || '',
+
+    if (currentIndex === -1) return this.schedule;
+
+  parseSchedule(raw) {      start: new Date(current),
+
+    const startIndex = Math.max(0, currentIndex - 1);
+
+    const endIndex = Math.min(this.schedule.length, currentIndex + 9);    const now = new Date();      duration: (typeof item.duration === 'number' && isFinite(item.duration)) ? item.duration : null,
+
+    return this.schedule.slice(startIndex, endIndex);
+
+  }    const monday = new Date(now);      airDate: item.airDate || '-'
+
+
+
+  handleMute() {    monday.setUTCHours(0, 0, 0, 0);    };
+
+    if (this.player) {
+
+      this.player.muted = !this.player.muted;        
+
+      const newHTML = this.player.muted ? 
+
+        '<i class="fas fa-volume-mute"></i><span>Unmute</span>' :     while (monday.getUTCDay() !== 1) {    schedule.push(entry);
+
+        '<i class="fas fa-volume-up"></i><span>Mute</span>';
+
+      this.elements.muteButton.innerHTML = newHTML;      monday.setUTCDate(monday.getUTCDate() - 1);    
+
+      this.elements.mobileMuteButton.innerHTML = newHTML;
+
+    }    }    if (entry.duration) {
+
+  }
+
+      current = new Date(current.getTime() + entry.duration * 1000);
+
+  async handleModalPlay() {
+
+    if (!this.player) return;    const firstDayOfMonth = new Date(monday);    } else {
+
+    
+
+    try {    firstDayOfMonth.setUTCDate(1);      // If no duration, assume 30 minutes
+
+      if (this.player.readyState === 0) {
+
+        await new Promise((resolve, reject) => {          current = new Date(current.getTime() + 30 * 60 * 1000);
+
+          const loadTimeout = setTimeout(() => {
+
+            reject(new Error('Media loading timed out'));    while (firstDayOfMonth.getUTCDay() !== 1) {    }
+
+          }, 30000);
+
+      firstDayOfMonth.setUTCDate(firstDayOfMonth.getUTCDate() + 1);    
+
+          const cleanup = () => {
+
+            this.player.removeEventListener('loadedmetadata', handleLoad);    }    // Loop back to the beginning of the raw list when we reach the end
+
+            this.player.removeEventListener('error', handleError);
+
+            clearTimeout(loadTimeout);        rawIndex = (rawIndex + 1) % raw.length;
+
+          };
+
+    const weekOfMonth = Math.ceil((monday.getUTCDate() - firstDayOfMonth.getUTCDate()) / 7) + 1;  }
+
+          const handleLoad = () => {
+
+            cleanup();    const lastDayOfMonth = new Date(monday);  
+
+            resolve();
+
+          };    lastDayOfMonth.setUTCMonth(lastDayOfMonth.getUTCMonth() + 1, 0);  return schedule;
+
+
+
+          const handleError = (error) => {    const totalWeeks = Math.ceil((lastDayOfMonth.getUTCDate() - firstDayOfMonth.getUTCDate() + 1) / 7);}
+
+            cleanup();
+
+            reject(error);    
+
+          };
+
+    const totalEpisodes = raw.length;// Format a date in a human-readable way
+
+          this.player.addEventListener('loadedmetadata', handleLoad);
+
+          this.player.addEventListener('error', handleError);    const episodesPerWeek = Math.floor(totalEpisodes / totalWeeks);  formatAirDate(dateString) {
+
+          this.player.load();
+
+        });    const weekOffset = (weekOfMonth - 1) * episodesPerWeek;    const date = new Date(dateString);
+
+      }
+
+        const options = { 
+
+      await this.player.play();
+
+      this.updateStatus(`Playing: ${this.currentItem.title || this.currentItem.url}`, this.currentItem.airDate);    let current = new Date(monday);      year: 'numeric', 
+
+      this.setItemStatus(this.currentItem, `Playing (${this.formatDuration(this.player.currentTime)})`);
+
+      this.elements.autoplayModal.style.display = 'none';    const endTime = new Date(monday);      month: 'long', 
+
+    } catch (err) {
+
+      console.error('Playback failed:', err);    endTime.setUTCDate(endTime.getUTCDate() + 7);      day: 'numeric',
+
+      let message = 'Failed to start playback';
+
+                timeZone: 'UTC'  // Use UTC to avoid timezone conversion
+
+      if (err.name === 'NotSupportedError') {
+
+        message = 'Media format not supported by your browser';    const schedule = [];    };
+
+      } else if (err.name === 'NotAllowedError') {
+
+        message = 'Playback not allowed. Please try again.';    let idx = 1;    return date.toLocaleDateString(undefined, options);
+
+      } else if (err.message === 'Media loading timed out') {
+
+        message = 'Media loading timed out. Please check your connection and try again.';    let rawIndex = weekOffset % raw.length;  }
+
+      }
+
+          
+
+      this.updateStatus(`Error: ${message}`);
+
+    }    while (current < endTime) {function formatUTC(d){
+
+  }
+
+      const item = raw[rawIndex];  // Display as local date and time in a human-friendly way, 12-hour format
+
+  async initializePlayer(item) {
+
+    try {      const entry = {  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+      if (this.player) {
+
+        try {        idx: idx++,  return d.toLocaleString(undefined, {
+
+          this.player.pause();
+
+          this.player.remove();        url: item.url,    weekday: 'short',
+
+        } catch (err) {
+
+          console.warn('Error cleaning up old player:', err);        title: item.title || '',    month: 'short',
+
+        }
+
+        this.player = null;        start: new Date(current),    day: 'numeric',
+
+      }
+
+        duration: (typeof item.duration === 'number' && isFinite(item.duration)) ? item.duration : null,    hour: '2-digit',
+
+      const ext = item.url.split('.').pop().toLowerCase();
+
+      const isVideo = ['mp4','webm','ogg'].includes(ext);        airDate: item.airDate || '-'    minute: '2-digit',
+
+      
+
+      this.player = document.createElement(isVideo ? 'video' : 'audio');      };    second: '2-digit',
+
+      if (isVideo) {
+
+        this.player.width = 640;          hour12: true,
+
+        this.player.height = 360;
+
+      }      schedule.push(entry);    timeZoneName: 'short'
+
+      
+
+      this.setupPlayerEventHandlers();        });
+
+      
+
+      this.player.preload = 'auto';      if (entry.duration) {}
+
+      this.player.crossOrigin = 'anonymous';
+
+              current = new Date(current.getTime() + entry.duration * 1000);
+
+      // Set source and type
+
+      this.player.src = item.url;      } else {function formatDuration(seconds) {
+
+      this.player.type = isVideo ? `video/${ext}` : 'audio/mpeg';
+
+              current = new Date(current.getTime() + 30 * 60 * 1000);  if (typeof seconds !== 'number' || !isFinite(seconds)) return '00:00:00';
+
+      this.elements.mediaContainer.appendChild(this.player);
+
+            }  seconds = Math.floor(seconds);
+
+      try {
+
+        await this.player.play();        const h = Math.floor(seconds / 3600);
+
+        this.updateStatus(`${item.title || item.url}`, item.airDate);
+
+        this.setItemStatus(item, `Playing (${this.formatDuration(0)})`);      rawIndex = (rawIndex + 1) % raw.length;  const m = Math.floor((seconds % 3600) / 60);
+
+      } catch (err) {
+
+        this.updateStatus('Click Play to start');    }  const s = seconds % 60;
+
+        this.setItemStatus(item, 'Waiting');
+
+        this.elements.autoplayModal.style.display = 'flex';      return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+
+      }
+
+    } catch (err) {    return schedule;}
+
+      console.error('Error initializing player:', err);
+
+      this.updateStatus('Error initializing media player');  }
+
+    }
+
+  }const statusEl = document.getElementById('status');
+
+
+
+  setupPlayerEventHandlers() {  findCurrent(now = new Date()) {const tableBody = document.querySelector('#schedTable tbody');
+
+    this.player.onerror = (e) => {
+
+      console.error('Media Error Event:', e);    for (const it of this.schedule) {const mediaContainer = document.getElementById('mediaContainer');
+
+      if (this.player.error) {
+
+        console.error('Player Error:', {      if (it.duration != null) {const muteButton = document.getElementById('muteButton');
+
+          code: this.player.error.code,
+
+          message: this.player.error.message        const end = new Date(it.start.getTime() + it.duration * 1000);const mobileMuteButton = document.getElementById('mobileMuteButton');
+
+        });
+
+                if (now >= it.start && now < end) {const mobileTitle = document.getElementById('mobileTitle');
+
+        let errorMessage = 'Unable to play media. ';
+
+        switch (this.player.error.code) {          return { item: it, elapsed: (now - it.start) / 1000 };const mobileAirDate = document.getElementById('mobileAirDate');
+
+          case 1: errorMessage += 'The media was aborted.'; break;
+
+          case 2: errorMessage += 'Network error occurred.'; break;        }const mobileNextTitle = document.getElementById('mobileNextTitle');
+
+          case 3: errorMessage += 'Media decoding failed.'; break;
+
+          case 4: errorMessage += 'Media source not supported.'; break;      }const mobileNextAirDate = document.getElementById('mobileNextAirDate');
+
+          default: errorMessage += this.player.error.message || 'Unknown error occurred.';
+
+        }    }const progressBar = document.getElementById('progressBar');
+
+        this.updateStatus(errorMessage);
+
+      }    const mobileTime = document.getElementById('mobileTime');
+
+    };
+
+    const candidates = this.schedule.filter(it => now >= it.start && it.duration == null);const desktopProgressBar = document.getElementById('desktopProgressBar');
+
+    this.player.addEventListener('timeupdate', () => {
+
+      if (this.currentItem && !this.player.paused) {    if (candidates.length) {const desktopTime = document.getElementById('desktopTime');
+
+        const currentTime = this.formatDuration(Math.floor(this.player.currentTime));
+
+        this.setItemStatus(this.currentItem, `Playing (${currentTime})`);      const it = candidates[candidates.length - 1];
+
+        
+
+        if (this.player.duration) {      return { item: it, elapsed: (now - it.start) / 1000 };let schedule = [], currentItem = null, player = null;
+
+          const progress = (this.player.currentTime / this.player.duration) * 100;
+
+          this.elements.progressBar.style.width = `${progress}%`;    }
+
+          this.elements.mobileTime.textContent = currentTime;
+
+          this.elements.desktopProgressBar.style.width = `${progress}%`;    return null;// Update status element
+
+          this.elements.desktopTime.textContent = currentTime;
+
+        }  }function updateStatus(text, airDate) {
+
+      }
+
+    });  if (statusEl) {
+
+
+
+    this.player.addEventListener('ended', () => {  renderTable() {    if (airDate) {
+
+      const idx = this.schedule.findIndex(it => it.idx === this.currentItem.idx);
+
+      if (idx >= 0 && idx < this.schedule.length - 1) {    this.elements.tableBody.innerHTML = '';      const formattedDate = formatAirDate(airDate);
+
+        this.currentItem = this.schedule[idx + 1];
+
+        this.initializePlayer(this.currentItem);    const visibleEpisodes = this.getVisibleEpisodes();      statusEl.textContent = `${text} (Original Air Date: ${formattedDate})`;
+
+      } else {
+
+        this.updateStatus('End of schedule.');        } else {
+
+      }
+
+    });    visibleEpisodes.forEach(item => {      statusEl.textContent = text;
+
+  }
+
+      const tr = document.createElement('tr');    }
+
+  async loadSchedule() {
+
+    try {      tr.id = `row-${item.idx}`;  }
+
+      this.updateStatus('Loading schedule...');
+
+      const res = await fetch(this.SCHEDULE_URL, { cache: 'no-store' });      tr.innerHTML = `}
+
+      if (!res.ok) throw new Error('Failed to fetch schedule');
+
+              <td>${item.idx}</td>
+
+      const data = await res.json();
+
+      this.schedule = this.parseSchedule(data);        <td>${this.formatUTC(item.start)}</td>// Handle mute button clicks for both desktop and mobile
+
+      this.updateStatus('Schedule loaded');
+
+      this.renderTable();        <td>${item.title || item.url}</td>function handleMuteClick() {
+
+      
+
+      const current = this.findCurrent();        <td>${this.formatAirDate(item.airDate)}</td>  if (player) {
+
+      if (current) {
+
+        this.currentItem = current.item;        <td id="st-${item.idx}">-</td>    player.muted = !player.muted;
+
+        await this.initializePlayer(this.currentItem);
+
+      } else {      `;    const newHTML = player.muted ? 
+
+        this.updateStatus('No scheduled media for right now.');
+
+      }            '<i class="fas fa-volume-mute"></i><span>Unmute</span>' : 
+
+    } catch (err) {
+
+      console.error('Failed to load schedule:', err);      if (this.currentItem && item.idx < this.currentItem.idx) {      '<i class="fas fa-volume-up"></i><span>Mute</span>';
+
+      this.updateStatus('Failed to load schedule');
+
+    }        tr.classList.add('past-episode');    muteButton.innerHTML = newHTML;
+
+  }
+
+}      }    mobileMuteButton.innerHTML = newHTML;
+
+
+
+// Initialize the application        }
+
+const player = new MediaPlayerManager();
+
+player.loadSchedule().catch(err => {      this.elements.tableBody.appendChild(tr);}
+
+  console.error('Failed to start application:', err);
+
+});    });
+
+  }muteButton.addEventListener('click', handleMuteClick);
+
+mobileMuteButton.addEventListener('click', handleMuteClick);
+
+  getVisibleEpisodes() {
+
+    if (!this.currentItem || !this.schedule.length) return this.schedule;function getVisibleEpisodes() {
+
+      if (!currentItem || !schedule.length) return schedule;
+
+    const currentIndex = this.schedule.findIndex(item => item.idx === this.currentItem.idx);  
+
+    if (currentIndex === -1) return this.schedule;  const currentIndex = schedule.findIndex(item => item.idx === currentItem.idx);
+
+  if (currentIndex === -1) return schedule;
+
+    const startIndex = Math.max(0, currentIndex - 1);
+
+    const endIndex = Math.min(this.schedule.length, currentIndex + 9);  // Get previous episode (if exists), current episode, and next 8 episodes
+
+    return this.schedule.slice(startIndex, endIndex);  const startIndex = Math.max(0, currentIndex - 1);
+
+  }  const endIndex = Math.min(schedule.length, currentIndex + 9); // current + 8 next = 9
+
+  return schedule.slice(startIndex, endIndex);
+
+  // Player Methods}
+
+  handleMute() {
+
+    if (this.player) {function renderTable() {
+
+      this.player.muted = !this.player.muted;  tableBody.innerHTML = '';
+
+      const newHTML = this.player.muted ?   const visibleEpisodes = getVisibleEpisodes();
+
+        '<i class="fas fa-volume-mute"></i><span>Unmute</span>' :   
+
+        '<i class="fas fa-volume-up"></i><span>Mute</span>';  visibleEpisodes.forEach(item => {
+
+      this.elements.muteButton.innerHTML = newHTML;    const tr = document.createElement('tr');
+
+      this.elements.mobileMuteButton.innerHTML = newHTML;    tr.id = `row-${item.idx}`;
+
+    }    tr.innerHTML = `<td>${item.idx}</td><td>${formatUTC(item.start)}</td><td>${item.title || item.url}</td><td>${formatAirDate(item.airDate)}</td><td id="st-${item.idx}">-</td>`;
+
+  }    
+
+    // If we have a current item, style past episodes differently
+
+  async handleModalPlay() {    if (currentItem && item.idx < currentItem.idx) {
+
+    if (!this.player) return;      tr.classList.add('past-episode');
+
+        }
+
+    try {    
+
+      if (this.player.readyState === 0) {    tableBody.appendChild(tr);
+
+        await new Promise((resolve, reject) => {  });
+
+          const loadTimeout = setTimeout(() => {}
+
+            reject(new Error('Media loading timed out'));
+
+          }, 30000);// Helper function to scroll to current episode
+
+function scrollToCurrentEpisode(smooth = true) {
+
+          const cleanup = () => {  if (!currentItem) return;
+
+            this.player.removeEventListener('loadedmetadata', handleLoad);  
+
+            this.player.removeEventListener('error', handleError);  const row = document.getElementById(`row-${currentItem.idx}`);
+
+            clearTimeout(loadTimeout);  if (!row) return;
+
+          };
+
+  // Only auto-scroll in desktop view
+
+          const handleLoad = () => {  if (window.innerWidth > 768) {
+
+            cleanup();    const header = document.querySelector('.header-container');
+
+            resolve();    const controls = document.querySelector('.controls.desktop-controls');
+
+          };    const offset = header.offsetHeight + controls.offsetHeight;
+
+
+
+          const handleError = (error) => {    const scrollOptions = {
+
+            cleanup();      behavior: smooth ? 'smooth' : 'auto',
+
+            reject(error);      block: 'nearest',
+
+          };    };
+
+
+
+          this.player.addEventListener('loadedmetadata', handleLoad);    // Calculate the target scroll position
+
+          this.player.addEventListener('error', handleError);    const rowRect = row.getBoundingClientRect();
+
+          this.player.load();    const targetScroll = window.scrollY + rowRect.top - offset - 20; // 20px padding
+
+        });
+
+      }    window.scrollTo({
+
+      top: targetScroll,
+
+      await this.player.play();      behavior: smooth ? 'smooth' : 'auto'
+
+      this.updateStatus(`Playing: ${this.currentItem.title || this.currentItem.url}`, this.currentItem.airDate);    });
+
+      this.setItemStatus(this.currentItem, `Playing (${this.formatDuration(this.player.currentTime)})`);  }
+
+      this.elements.autoplayModal.style.display = 'none';}
+
+    } catch (err) {
+
+      console.error('Playback failed:', err);function findCurrent(now = new Date()){
+
+      let message = 'Failed to start playback';  for(const it of schedule){
+
+          if(it.duration!=null){
+
+      if (err.name === 'NotSupportedError') {      const end = new Date(it.start.getTime() + it.duration*1000);
+
+        message = 'Media format not supported by your browser';      if(now >= it.start && now < end) return {item:it, elapsed: (now - it.start)/1000};
+
+      } else if (err.name === 'NotAllowedError') {    }
+
+        message = 'Playback not allowed. Please try again.';  }
+
+      } else if (err.message === 'Media loading timed out') {  const candidates = schedule.filter(it => now >= it.start && it.duration==null);
+
+        message = 'Media loading timed out. Please check your connection and try again.';  if(candidates.length) {
+
+      }    const it = candidates[candidates.length-1];
+
+          return {item:it, elapsed: (now - it.start)/1000};
+
+      this.updateStatus(`Error: ${message}`);  }
+
+    }  return null;
+
+  }}
+
+
+
+  async initializePlayer(item) {async function tryLoadSchedule(){
+
+    try {  statusEl.textContent = 'Loading schedule...';
+
+      if (this.player) {  try{
+
+        try {    const res = await fetch(SCHEDULE_URL, {cache:'no-store'});
+
+          this.player.pause();    if(!res.ok) throw new Error();
+
+          this.player.remove();    schedule = parseSchedule(await res.json());
+
+        } catch (err) {    statusEl.textContent = 'Loaded external schedule.json';
+
+          console.warn('Error cleaning up old player:', err);  }catch{
+
+        }    schedule = [];
+
+        this.player = null;    statusEl.textContent = 'Failed to load schedule.json';
+
+      }  }
+
+  renderTable();
+
+      const ext = item.url.split('.').pop().toLowerCase();  await handlePlaybackAtLoad();
+
+      const isVideo = ['mp4','webm','ogg'].includes(ext);}
+
+      
+
+      this.player = document.createElement(isVideo ? 'video' : 'audio');function setItemStatus(item, text){
+
+      if (isVideo) {  const el = document.getElementById('st-' + item.idx);
+
+        this.player.width = 640;  if(el) el.textContent = text;
+
+        this.player.height = 360;}
+
+      }
+
+      function showLoadingModal() {
+
+      this.setupPlayerEventHandlers();  document.getElementById('loadingModal').style.display = 'flex';
+
+      }
+
+      this.player.preload = 'auto';
+
+      this.player.crossOrigin = 'anonymous';function hideLoadingModal() {
+
+        document.getElementById('loadingModal').style.display = 'none';
+
+      // Set source and type}
+
+      this.player.src = item.url;
+
+      this.player.type = isVideo ? `video/${ext}` : 'audio/mpeg';async function handlePlaybackAtLoad(seekTo = null) {
+
+        try {
+
+      this.elements.mediaContainer.appendChild(this.player);    const now = new Date();
+
+          const found = findCurrent(now);
+
+      try {    schedule.forEach(it => setItemStatus(it, '-'));
+
+        await this.player.play();    mediaContainer.innerHTML = '';
+
+        this.updateStatus(`${item.title || item.url}`, item.airDate);
+
+        this.setItemStatus(item, `Playing (${this.formatDuration(0)})`);    if (!found) {
+
+      } catch (err) {      elements.status.textContent = 'No scheduled media for right now.';
+
+        this.updateStatus('Click Play to start');      currentItem = null;
+
+        this.setItemStatus(item, 'Waiting');      return;
+
+        this.elements.autoplayModal.style.display = 'flex';    }
+
+      }
+
+    } catch (err) {    currentItem = found.item;
+
+      console.error('Error initializing player:', err);    let elapsed = found.elapsed;
+
+      this.updateStatus('Error initializing media player');    if (seekTo !== null) elapsed = seekTo;
+
+    }    
+
+  }    updateStatus(`Preparing '${currentItem.title || currentItem.url}' — scheduled ${formatUTC(currentItem.start)}`, currentItem.airDate);
+
+    setItemStatus(currentItem, 'Loading');
+
+  setupPlayerEventHandlers() {
+
+    this.player.onerror = (e) => {  // Scroll to the currently playing row in the table
+
+      console.error('Media Error Event:', e);    setTimeout(() => {
+
+      if (this.player.error) {      const row = document.getElementById(`row-${currentItem.idx}`);
+
+        console.error('Player Error:', {      if(row) {
+
+          code: this.player.error.code,        // Add highlight class first
+
+          message: this.player.error.message        row.classList.add('highlight-current');
+
+        });        
+
+                // On mobile, account for sticky header and controls
+
+        let errorMessage = 'Unable to play media. ';        const isMobile = window.innerWidth <= 768;
+
+        switch (this.player.error.code) {        if (isMobile) {
+
+          case 1: errorMessage += 'The media was aborted.'; break;          const headerHeight = document.querySelector('.header-container').offsetHeight;
+
+          case 2: errorMessage += 'Network error occurred.'; break;          const controlsHeight = document.querySelector('.controls').offsetHeight;
+
+          case 3: errorMessage += 'Media decoding failed.'; break;          const totalOffset = headerHeight + controlsHeight + 20; // Add some padding
+
+          case 4: errorMessage += 'Media source not supported.'; break;          
+
+          default: errorMessage += this.player.error.message || 'Unknown error occurred.';          const rowRect = row.getBoundingClientRect();
+
+        }          window.scrollTo({
+
+        this.updateStatus(errorMessage);            top: window.scrollY + rowRect.top - totalOffset,
+
+      }            behavior: 'smooth'
+
+    };          });
+
+        } else {
+
+    this.player.addEventListener('timeupdate', () => {          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      if (this.currentItem && !this.player.paused) {        }
+
+        const currentTime = this.formatDuration(Math.floor(this.player.currentTime));      }
+
+        this.setItemStatus(this.currentItem, `Playing (${currentTime})`);    }, 100);function initializePlayer(currentItem) {
+
+          try {
+
+        if (this.player.duration) {    // Clean up old player if it exists
+
+          const progress = (this.player.currentTime / this.player.duration) * 100;    if (player) {
+
+          this.elements.progressBar.style.width = `${progress}%`;      try {
+
+          this.elements.mobileTime.textContent = currentTime;        player.pause();
+
+          this.elements.desktopProgressBar.style.width = `${progress}%`;        player.remove();
+
+          this.elements.desktopTime.textContent = currentTime;      } catch (err) {
+
+        }        console.warn('Error cleaning up old player:', err);
+
+      }      }
+
+    });      player = null;
+
+    }
+
+    this.player.addEventListener('ended', () => {
+
+      const idx = this.schedule.findIndex(it => it.idx === this.currentItem.idx);    const ext = currentItem.url.split('.').pop().toLowerCase();
+
+      if (idx >= 0 && idx < this.schedule.length - 1) {    const playerContainer = document.createElement('div');
+
+        this.currentItem = this.schedule[idx + 1];    playerContainer.className = 'custom-player';
+
+        this.initializePlayer(this.currentItem);
+
+      } else {    // Create new player
+
+        this.updateStatus('End of schedule.');    if(['mp4','webm','ogg'].includes(ext)){
+
+      }      player = document.createElement('video');
+
+    });      player.width = 640; player.height = 360;
+
+  }    } else {
+
+      player = document.createElement('audio');
+
+  // Application initialization    }
+
+  async loadSchedule() {
+
+    try {    // Set up comprehensive error handling
+
+      this.updateStatus('Loading schedule...');    player.onerror = (e) => {
+
+      const res = await fetch(this.SCHEDULE_URL, { cache: 'no-store' });      console.error('Media Error Event:', e);
+
+      if (!res.ok) throw new Error('Failed to fetch schedule');      if (player.error) {
+
+              console.error('Error code:', player.error.code);
+
+      const data = await res.json();        console.error('Error message:', player.error.message);
+
+      this.schedule = this.parseSchedule(data);        
+
+      this.updateStatus('Schedule loaded');        let errorMessage = 'Unable to play media. ';
+
+      this.renderTable();        switch (player.error.code) {
+
+                case 1:
+
+      const current = this.findCurrent();            errorMessage += 'The media was aborted.';
+
+      if (current) {            break;
+
+        this.currentItem = current.item;          case 2:
+
+        await this.initializePlayer(this.currentItem);            errorMessage += 'Network error occurred.';
+
+      } else {            break;
+
+        this.updateStatus('No scheduled media for right now.');          case 3:
+
+      }            errorMessage += 'Media decoding failed.';
+
+    } catch (err) {            break;
+
+      console.error('Failed to load schedule:', err);          case 4:
+
+      this.updateStatus('Failed to load schedule');            errorMessage += 'Media source not supported.';
+
+    }            break;
+
+  }          default:
+
+}            errorMessage += player.error.message || 'Unknown error occurred.';
+
+        }
+
+// Initialize the application        updateStatus(errorMessage);
+
+const player = new MediaPlayerManager();      }
+
+player.loadSchedule().catch(err => {      console.error('Source URL:', currentItem.url);
+
+  console.error('Failed to start application:', err);    };
+
+});
+    // Set initial attributes before adding source
+    player.preload = 'auto';
+    player.crossOrigin = 'anonymous';
+    
+    // Set source directly on player for better compatibility
+    player.src = currentItem.url;
+    
+    // Set MIME type based on extension
+    if (['mp4','webm','ogg'].includes(ext)) {
+      player.type = `video/${ext}`;
+    } else if (ext === 'mp3') {
+      player.type = 'audio/mpeg';
+    } else {
+      // Default to mp3 if extension is unknown
+      player.type = 'audio/mpeg';
+    }
+
+    // Add error handling for the source
+    player.onerror = (e) => {
+      console.error('Source Error:', e);
+      if (player.error) {
+        console.error('Player Error:', {
+          code: player.error.code,
+          message: player.error.message
+        });
+      }
+      updateStatus('Error loading media source. Please try again.');
+    };
+  
+  // Update status and progress when playing
+  player.addEventListener('timeupdate', () => {
+    if (currentItem && !player.paused) {
+      const currentTime = formatDuration(Math.floor(player.currentTime));
+      setItemStatus(currentItem, `Playing (${currentTime})`);
+      
+      // Update progress bars
+      if (player.duration) {
+        const progress = (player.currentTime / player.duration) * 100;
+        // Update mobile progress
+        progressBar.style.width = `${progress}%`;
+        mobileTime.textContent = currentTime;
+        // Update desktop progress
+        desktopProgressBar.style.width = `${progress}%`;
+        desktopTime.textContent = currentTime;
+      }
+    }
+  });
+
+  // Update mobile view info
+  const updateMobileInfo = () => {
+    if (currentItem) {
+      mobileTitle.textContent = currentItem.title || currentItem.url;
+      mobileAirDate.textContent = `Original Air Date: ${formatAirDate(currentItem.airDate)}`;
+      
+      // Find next item
+      const currentIndex = schedule.findIndex(item => item.idx === currentItem.idx);
+      if (currentIndex > -1 && currentIndex < schedule.length - 1) {
+        const nextItem = schedule[currentIndex + 1];
+        mobileNextTitle.textContent = nextItem.title || nextItem.url;
+        mobileNextAirDate.textContent = `Original Air Date: ${nextItem.airDate}`;
+      }
+    }
+  };
+  
+  updateMobileInfo();
+  player.addEventListener('play', updateMobileInfo);
+
+  mediaContainer.appendChild(player);
+
+  showLoadingModal();
+  
+  await new Promise(resolve=>{
+    const loadTimeout = setTimeout(() => {
+      hideLoadingModal();
+      resolve();
+    }, 30000); // Timeout after 30 seconds
+    
+    player.addEventListener('loadedmetadata', ()=>{
+      clearTimeout(loadTimeout);
+      hideLoadingModal();
+      let seek = elapsed;
+      const dur = currentItem.duration ?? player.duration;
+      if(dur && seek >= dur) seek = Math.max(0, dur - 0.5);
+      try{player.currentTime = Math.max(0, seek);}catch{}
+      resolve();
+    });
+    
+    player.addEventListener('error', () => {
+      clearTimeout(loadTimeout);
+      hideLoadingModal();
+      resolve();
+    });
+    
+    player.load();
+  });
+
+  // Auto-advance to next file when current ends
+  player.addEventListener('ended', () => {
+    const idx = schedule.findIndex(it => it.idx === currentItem.idx);
+    // Remove highlight from previous row
+    if(currentItem && currentItem.idx) {
+      const prevRow = document.getElementById(`row-${currentItem.idx}`);
+      if(prevRow) {
+        prevRow.classList.remove('highlight-current');
+        // Add to past episodes in desktop view
+        prevRow.classList.add('past-episode');
+      }
+    }
+    if(idx >= 0 && idx < schedule.length - 1) {
+      currentItem = schedule[idx + 1];
+      // Re-render table to show new episode window
+      renderTable();
+      // Scroll to next episode immediately
+      scrollToCurrentEpisode(true);
+      // Scroll to next and play
+      setTimeout(() => {
+        const row = document.getElementById(`row-${currentItem.idx}`);
+        if(row) {
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          row.classList.add('highlight-current');
+        }
+      }, 100);
+      // Play next from beginning
+      updateStatus(`Preparing '${currentItem.title || currentItem.url}' — scheduled ${formatUTC(currentItem.start)}`, currentItem.airDate);
+      setItemStatus(currentItem,'Loading');
+      mediaContainer.innerHTML = '';
+      // Always start at beginning for next track
+      handlePlaybackAtLoad(0);
+    } else {
+      statusEl.textContent = 'End of schedule.';
+      playToggle.textContent = 'Play';
+    }
+  });
+
+  try {
+    await player.play();
+    updateStatus(`${currentItem.title || currentItem.url}`, currentItem.airDate);
+    setItemStatus(currentItem, `Playing (${formatDuration(0)})`);
+    // Re-render table to show correct episode window
+    renderTable();
+    // Scroll to current episode
+    scrollToCurrentEpisode();
+  } catch {
+    updateStatus('Click Play to start');
+    setItemStatus(currentItem,'Waiting');
+    // Show the autoplay modal
+    document.getElementById('autoplayModal').style.display = 'flex';
+  }
+}
+
+// Modal play button handler
+document.getElementById('modalPlayBtn').addEventListener('click', async () => {
+  console.log('Modal play button clicked');
+  
+  if (player) {
+    try {
+      // Make sure media is loaded
+      if (player.readyState === 0) {
+        console.log('Loading media...');
+        try {
+          await new Promise((resolve, reject) => {
+            const loadTimeout = setTimeout(() => {
+              reject(new Error('Media loading timed out'));
+            }, 30000); // 30 second timeout
+
+            const handleLoad = () => {
+              clearTimeout(loadTimeout);
+              resolve();
+            };
+
+            const handleError = (error) => {
+              clearTimeout(loadTimeout);
+              reject(error);
+            };
+
+            player.addEventListener('loadedmetadata', handleLoad, { once: true });
+            player.addEventListener('error', handleError, { once: true });
+            
+            // Force reload
+            player.load();
+          });
+        } catch (loadError) {
+          console.error('Media loading failed:', loadError);
+          throw loadError; // Re-throw to be caught by outer catch
+        }
+      }
+      
+      console.log('Attempting to play');
+      await player.play();
+      console.log('Play successful');
+      
+      updateStatus(`Playing: ${currentItem.title || currentItem.url}`, currentItem.airDate);
+      setItemStatus(currentItem, `Playing (${formatDuration(player.currentTime)})`);
+      document.getElementById('autoplayModal').style.display = 'none';
+    } catch (err) {
+      console.error('Playback failed:', err);
+      if (err.name === 'NotSupportedError') {
+        updateStatus('Error: Media format not supported by your browser');
+      } else if (err.name === 'NotAllowedError') {
+        updateStatus('Error: Playback not allowed. Please try again.');
+      } else if (err.message === 'Media loading timed out') {
+        updateStatus('Error: Media loading timed out. Please check your connection and try again.');
+      } else {
+        updateStatus(`Error: ${err.message || 'Failed to start playback'}`);
+      }
+      console.error('Detailed error:', err);
+    }
+  } else {
+    console.error('No player available');
+    updateStatus('Error: Media player not initialized');
+  }
+});
+
+// Add touch event handler for mobile
+document.getElementById('modalPlayBtn').addEventListener('touchend', async (e) => {
+  e.preventDefault(); // Prevent any default touch behavior
+  const btn = e.currentTarget;
+  
+  // Trigger click event
+  btn.click();
+});
+
+// Initialize the application
+async function init() {
+  try {
+    updateStatus('Loading schedule...');
+    const res = await fetch(SCHEDULE_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Failed to fetch schedule');
+    
+    const data = await res.json();
+    schedule = parseSchedule(data);
+    updateStatus('Schedule loaded');
+    renderTable();
+    
+    const current = findCurrent();
+    if (current) {
+      currentItem = current.item;
+      await initializePlayer(currentItem);
+    } else {
+      updateStatus('No scheduled media for right now.');
+    }
+  } catch (err) {
+    console.error('Initialization error:', err);
+    updateStatus('Failed to initialize application');
+  }
+}
+
+// Start the application
+init();

@@ -530,3 +530,19 @@ button:hover {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* Hide Start column in desktop view */
+@media (min-width: 769px) {
+  #schedTable th:nth-child(2),
+  #schedTable td:nth-child(2) {
+    display: none;
+  }
+}
+
+/* Show Start column in mobile view */
+@media (max-width: 768px) {
+  #schedTable th:nth-child(2),
+  #schedTable td:nth-child(2) {
+    display: table-cell;
+  }
+}
