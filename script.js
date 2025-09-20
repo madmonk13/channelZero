@@ -1,4 +1,4 @@
-const SCHEDULE_URL = './schedule.json';
+const SCHEDULE_URL = './schedule_rfr.json';
 
 function parseSchedule(raw) {
   // Find the most recent Monday at midnight UTC
