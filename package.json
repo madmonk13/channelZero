@@ -4,8 +4,7 @@
   "description": "Channel Zero is an attempt to create a radio station listening experience from old podcasts.  Yes, I took the name from the Public Enemy song.",
   "main": "fetch_schedule.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "http-server -c-1 --cors -p 8080"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",

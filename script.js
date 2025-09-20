@@ -1,395 +1,391 @@
-// Media Player Manager
-class MediaPlayerManager {
-  constructor() {
-    this.SCHEDULE_URL = './schedule.json';
-    this.schedule = [];
-    this.currentItem = null;
-    this.player = null;
-    
-    // Initialize DOM elements
-    this.elements = {
-      status: document.getElementById('status'),
-      tableBody: document.querySelector('#schedTable tbody'),
-      mediaContainer: document.getElementById('mediaContainer'),
-      muteButton: document.getElementById('muteButton'),
-      mobileMuteButton: document.getElementById('mobileMuteButton'),
-      mobileTitle: document.getElementById('mobileTitle'),
-      mobileAirDate: document.getElementById('mobileAirDate'),
-      mobileNextTitle: document.getElementById('mobileNextTitle'),
-      mobileNextAirDate: document.getElementById('mobileNextAirDate'),
-      progressBar: document.getElementById('progressBar'),
-      mobileTime: document.getElementById('mobileTime'),
-      desktopProgressBar: document.getElementById('desktopProgressBar'),
-      desktopTime: document.getElementById('desktopTime'),
-      autoplayModal: document.getElementById('autoplayModal'),
-      modalPlayBtn: document.getElementById('modalPlayBtn'),
-      loadingModal: document.getElementById('loadingModal')
+const SCHEDULE_URL = './schedule.json';
+
+function parseSchedule(raw) {
+  // Find the most recent Monday at midnight UTC
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setUTCHours(0, 0, 0, 0);
+  // Go back to the most recent Monday (0 = Sunday, 1 = Monday, etc)
+  while (monday.getUTCDay() !== 1) {
+    monday.setUTCDate(monday.getUTCDate() - 1);
+  }
+  
+  let current = new Date(monday);
+  // End time is the following Sunday at midnight
+  const endTime = new Date(monday);
+  endTime.setUTCDate(endTime.getUTCDate() + 7); // Add 7 days to get to next Monday
+  
+  let schedule = [];
+  let idx = 1;
+  let rawIndex = 0;
+  
+  while (current < endTime) {
+    const item = raw[rawIndex];
+    const entry = {
+      idx: idx++,
+      url: item.url,
+      title: item.title || '',
+      start: new Date(current),
+      duration: (typeof item.duration === 'number' && isFinite(item.duration)) ? item.duration : null,
+      airDate: item.airDate || '-'
     };
-
-    // Bind event handlers
-    this.handleMute = this.handleMute.bind(this);
-    this.handleModalPlay = this.handleModalPlay.bind(this);
-
-    this.elements.muteButton.addEventListener('click', this.handleMute);
-    this.elements.mobileMuteButton.addEventListener('click', this.handleMute);
-    this.elements.modalPlayBtn.addEventListener('click', this.handleModalPlay);
-    this.elements.modalPlayBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      e.currentTarget.click();
-    });
-  }
-
-  formatAirDate(dateString) {
-    const date = new Date(dateString);
-    const options = { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric',
-      timeZone: 'UTC'
-    };
-    return date.toLocaleDateString(undefined, options);
-  }
-
-  formatUTC(date) {
-    return date.toLocaleString(undefined, {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true,
-      timeZoneName: 'short'
-    });
-  }
-
-  formatDuration(seconds) {
-    if (typeof seconds !== 'number' || !isFinite(seconds)) return '00:00:00';
-    seconds = Math.floor(seconds);
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-  }
-
-  updateStatus(text, airDate) {
-    if (this.elements.status) {
-      if (airDate) {
-        const formattedDate = this.formatAirDate(airDate);
-        this.elements.status.textContent = `${text} (Original Air Date: ${formattedDate})`;
-      } else {
-        this.elements.status.textContent = text;
-      }
-    }
-  }
-
-  setItemStatus(item, text) {
-    const el = document.getElementById(`st-${item.idx}`);
-    if (el) el.textContent = text;
-  }
-
-  showLoadingModal() {
-    this.elements.loadingModal.style.display = 'flex';
-  }
-
-  hideLoadingModal() {
-    this.elements.loadingModal.style.display = 'none';
-  }
-
-  parseSchedule(raw) {
-    const now = new Date();
-    const monday = new Date(now);
-    monday.setUTCHours(0, 0, 0, 0);
     
-    while (monday.getUTCDay() !== 1) {
-      monday.setUTCDate(monday.getUTCDate() - 1);
-    }
-
-    const firstDayOfMonth = new Date(monday);
-    firstDayOfMonth.setUTCDate(1);
+    schedule.push(entry);
     
-    while (firstDayOfMonth.getUTCDay() !== 1) {
-      firstDayOfMonth.setUTCDate(firstDayOfMonth.getUTCDate() + 1);
+    if (entry.duration) {
+      current = new Date(current.getTime() + entry.duration * 1000);
+    } else {
+      // If no duration, assume 30 minutes
+      current = new Date(current.getTime() + 30 * 60 * 1000);
     }
     
-    const weekOfMonth = Math.ceil((monday.getUTCDate() - firstDayOfMonth.getUTCDate()) / 7) + 1;
-    const lastDayOfMonth = new Date(monday);
-    lastDayOfMonth.setUTCMonth(lastDayOfMonth.getUTCMonth() + 1, 0);
-    const totalWeeks = Math.ceil((lastDayOfMonth.getUTCDate() - firstDayOfMonth.getUTCDate() + 1) / 7);
-    
-    const totalEpisodes = raw.length;
-    const episodesPerWeek = Math.floor(totalEpisodes / totalWeeks);
-    const weekOffset = (weekOfMonth - 1) * episodesPerWeek;
-    
-    let current = new Date(monday);
-    const endTime = new Date(monday);
-    endTime.setUTCDate(endTime.getUTCDate() + 7);
-    
-    const schedule = [];
-    let idx = 1;
-    let rawIndex = weekOffset % raw.length;
-    
-    while (current < endTime) {
-      const item = raw[rawIndex];
-      const entry = {
-        idx: idx++,
-        url: item.url,
-        title: item.title || '',
-        start: new Date(current),
-        duration: (typeof item.duration === 'number' && isFinite(item.duration)) ? item.duration : null,
-        airDate: item.airDate || '-'
-      };
-      
-      schedule.push(entry);
-      
-      if (entry.duration) {
-        current = new Date(current.getTime() + entry.duration * 1000);
-      } else {
-        current = new Date(current.getTime() + 30 * 60 * 1000);
-      }
-      
-      rawIndex = (rawIndex + 1) % raw.length;
-    }
-    
-    return schedule;
+    // Loop back to the beginning of the raw list when we reach the end
+    rawIndex = (rawIndex + 1) % raw.length;
   }
+  
+  return schedule;
+}
 
-  findCurrent(now = new Date()) {
-    for (const it of this.schedule) {
-      if (it.duration != null) {
-        const end = new Date(it.start.getTime() + it.duration * 1000);
-        if (now >= it.start && now < end) {
-          return { item: it, elapsed: (now - it.start) / 1000 };
-        }
-      }
-    }
-    
-    const candidates = this.schedule.filter(it => now >= it.start && it.duration == null);
-    if (candidates.length) {
-      const it = candidates[candidates.length - 1];
-      return { item: it, elapsed: (now - it.start) / 1000 };
-    }
-    return null;
-  }
+function formatUTC(d){
+  // Display as local date and time in a human-friendly way, 12-hour format
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  return d.toLocaleString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+    timeZoneName: 'short'
+  });
+}
 
-  renderTable() {
-    this.elements.tableBody.innerHTML = '';
-    const visibleEpisodes = this.getVisibleEpisodes();
-    
-    visibleEpisodes.forEach(item => {
-      const tr = document.createElement('tr');
-      tr.id = `row-${item.idx}`;
-      tr.innerHTML = `
-        <td>${item.idx}</td>
-        <td>${this.formatUTC(item.start)}</td>
-        <td>${item.title || item.url}</td>
-        <td>${this.formatAirDate(item.airDate)}</td>
-        <td id="st-${item.idx}">-</td>
-      `;
-      
-      if (this.currentItem && item.idx < this.currentItem.idx) {
-        tr.classList.add('past-episode');
-      }
-      
-      this.elements.tableBody.appendChild(tr);
-    });
-  }
+function formatDuration(seconds) {
+  if (typeof seconds !== 'number' || !isFinite(seconds)) return '00:00:00';
+  seconds = Math.floor(seconds);
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+}
 
-  getVisibleEpisodes() {
-    if (!this.currentItem || !this.schedule.length) return this.schedule;
-    
-    const currentIndex = this.schedule.findIndex(item => item.idx === this.currentItem.idx);
-    if (currentIndex === -1) return this.schedule;
+const statusEl = document.getElementById('status');
+const tableBody = document.querySelector('#schedTable tbody');
+const mediaContainer = document.getElementById('mediaContainer');
+const muteButton = document.getElementById('muteButton');
+const mobileMuteButton = document.getElementById('mobileMuteButton');
+const mobileTitle = document.getElementById('mobileTitle');
+const mobileAirDate = document.getElementById('mobileAirDate');
+const mobileNextTitle = document.getElementById('mobileNextTitle');
+const mobileNextAirDate = document.getElementById('mobileNextAirDate');
+const progressBar = document.getElementById('progressBar');
+const mobileTime = document.getElementById('mobileTime');
+const desktopProgressBar = document.getElementById('desktopProgressBar');
+const desktopTime = document.getElementById('desktopTime');
 
-    const startIndex = Math.max(0, currentIndex - 1);
-    const endIndex = Math.min(this.schedule.length, currentIndex + 9);
-    return this.schedule.slice(startIndex, endIndex);
-  }
+let schedule = [], currentItem = null, player = null;
 
-  handleMute() {
-    if (this.player) {
-      this.player.muted = !this.player.muted;
-      const newHTML = this.player.muted ? 
-        '<i class="fas fa-volume-mute"></i><span>Unmute</span>' : 
-        '<i class="fas fa-volume-up"></i><span>Mute</span>';
-      this.elements.muteButton.innerHTML = newHTML;
-      this.elements.mobileMuteButton.innerHTML = newHTML;
-    }
-  }
+// Update status element
+function updateStatus(text) {
+  if (statusEl) statusEl.textContent = text;
+}
 
-  async handleModalPlay() {
-    if (!this.player) return;
-    
-    try {
-      if (this.player.readyState === 0) {
-        await new Promise((resolve, reject) => {
-          const loadTimeout = setTimeout(() => {
-            reject(new Error('Media loading timed out'));
-          }, 30000);
-
-          const cleanup = () => {
-            this.player.removeEventListener('loadedmetadata', handleLoad);
-            this.player.removeEventListener('error', handleError);
-            clearTimeout(loadTimeout);
-          };
-
-          const handleLoad = () => {
-            cleanup();
-            resolve();
-          };
-
-          const handleError = (error) => {
-            cleanup();
-            reject(error);
-          };
-
-          this.player.addEventListener('loadedmetadata', handleLoad);
-          this.player.addEventListener('error', handleError);
-          this.player.load();
-        });
-      }
-
-      await this.player.play();
-      this.updateStatus(`Playing: ${this.currentItem.title || this.currentItem.url}`, this.currentItem.airDate);
-      this.setItemStatus(this.currentItem, `Playing (${this.formatDuration(this.player.currentTime)})`);
-      this.elements.autoplayModal.style.display = 'none';
-    } catch (err) {
-      console.error('Playback failed:', err);
-      let message = 'Failed to start playback';
-      
-      if (err.name === 'NotSupportedError') {
-        message = 'Media format not supported by your browser';
-      } else if (err.name === 'NotAllowedError') {
-        message = 'Playback not allowed. Please try again.';
-      } else if (err.message === 'Media loading timed out') {
-        message = 'Media loading timed out. Please check your connection and try again.';
-      }
-      
-      this.updateStatus(`Error: ${message}`);
-    }
-  }
-
-  async initializePlayer(item) {
-    try {
-      if (this.player) {
-        try {
-          this.player.pause();
-          this.player.remove();
-        } catch (err) {
-          console.warn('Error cleaning up old player:', err);
-        }
-        this.player = null;
-      }
-
-      const ext = item.url.split('.').pop().toLowerCase();
-      const isVideo = ['mp4','webm','ogg'].includes(ext);
-      
-      this.player = document.createElement(isVideo ? 'video' : 'audio');
-      if (isVideo) {
-        this.player.width = 640;
-        this.player.height = 360;
-      }
-      
-      this.setupPlayerEventHandlers();
-      
-      this.player.preload = 'auto';
-      this.player.crossOrigin = 'anonymous';
-      
-      // Set source and type
-      this.player.src = item.url;
-      this.player.type = isVideo ? `video/${ext}` : 'audio/mpeg';
-      
-      this.elements.mediaContainer.appendChild(this.player);
-      
-      try {
-        await this.player.play();
-        this.updateStatus(`${item.title || item.url}`, item.airDate);
-        this.setItemStatus(item, `Playing (${this.formatDuration(0)})`);
-      } catch (err) {
-        this.updateStatus('Click Play to start');
-        this.setItemStatus(item, 'Waiting');
-        this.elements.autoplayModal.style.display = 'flex';
-      }
-    } catch (err) {
-      console.error('Error initializing player:', err);
-      this.updateStatus('Error initializing media player');
-    }
-  }
-
-  setupPlayerEventHandlers() {
-    this.player.onerror = (e) => {
-      console.error('Media Error Event:', e);
-      if (this.player.error) {
-        console.error('Player Error:', {
-          code: this.player.error.code,
-          message: this.player.error.message
-        });
-        
-        let errorMessage = 'Unable to play media. ';
-        switch (this.player.error.code) {
-          case 1: errorMessage += 'The media was aborted.'; break;
-          case 2: errorMessage += 'Network error occurred.'; break;
-          case 3: errorMessage += 'Media decoding failed.'; break;
-          case 4: errorMessage += 'Media source not supported.'; break;
-          default: errorMessage += this.player.error.message || 'Unknown error occurred.';
-        }
-        this.updateStatus(errorMessage);
-      }
-    };
-
-    this.player.addEventListener('timeupdate', () => {
-      if (this.currentItem && !this.player.paused) {
-        const currentTime = this.formatDuration(Math.floor(this.player.currentTime));
-        this.setItemStatus(this.currentItem, `Playing (${currentTime})`);
-        
-        if (this.player.duration) {
-          const progress = (this.player.currentTime / this.player.duration) * 100;
-          this.elements.progressBar.style.width = `${progress}%`;
-          this.elements.mobileTime.textContent = currentTime;
-          this.elements.desktopProgressBar.style.width = `${progress}%`;
-          this.elements.desktopTime.textContent = currentTime;
-        }
-      }
-    });
-
-    this.player.addEventListener('ended', () => {
-      const idx = this.schedule.findIndex(it => it.idx === this.currentItem.idx);
-      if (idx >= 0 && idx < this.schedule.length - 1) {
-        this.currentItem = this.schedule[idx + 1];
-        this.initializePlayer(this.currentItem);
-      } else {
-        this.updateStatus('End of schedule.');
-      }
-    });
-  }
-
-  async loadSchedule() {
-    try {
-      this.updateStatus('Loading schedule...');
-      const res = await fetch(this.SCHEDULE_URL, { cache: 'no-store' });
-      if (!res.ok) throw new Error('Failed to fetch schedule');
-      
-      const data = await res.json();
-      this.schedule = this.parseSchedule(data);
-      this.updateStatus('Schedule loaded');
-      this.renderTable();
-      
-      const current = this.findCurrent();
-      if (current) {
-        this.currentItem = current.item;
-        await this.initializePlayer(this.currentItem);
-      } else {
-        this.updateStatus('No scheduled media for right now.');
-      }
-    } catch (err) {
-      console.error('Failed to load schedule:', err);
-      this.updateStatus('Failed to load schedule');
-    }
+// Handle mute button clicks for both desktop and mobile
+function handleMuteClick() {
+  if (player) {
+    player.muted = !player.muted;
+    const newHTML = player.muted ? 
+      '<i class="fas fa-volume-mute"></i><span>Unmute</span>' : 
+      '<i class="fas fa-volume-up"></i><span>Mute</span>';
+    muteButton.innerHTML = newHTML;
+    mobileMuteButton.innerHTML = newHTML;
   }
 }
 
-// Initialize the application
-const player = new MediaPlayerManager();
-player.loadSchedule().catch(err => {
-  console.error('Failed to start application:', err);
+muteButton.addEventListener('click', handleMuteClick);
+mobileMuteButton.addEventListener('click', handleMuteClick);
+
+function renderTable() {
+  tableBody.innerHTML = '';
+  schedule.forEach(item=>{
+    const tr = document.createElement('tr');
+    tr.id = `row-${item.idx}`;
+    tr.innerHTML = `<td>${item.idx}</td><td>${formatUTC(item.start)}</td><td>${item.title || item.url}</td><td>${item.airDate}</td><td id="st-${item.idx}">-</td>`;
+    
+    // If we have a current item, hide past episodes in desktop view
+    if (currentItem && item.idx < currentItem.idx) {
+      tr.classList.add('past-episode');
+    }
+    
+    tableBody.appendChild(tr);
+  });
+}
+
+// Helper function to scroll to current episode
+function scrollToCurrentEpisode(smooth = true) {
+  if (!currentItem) return;
+  
+  const row = document.getElementById(`row-${currentItem.idx}`);
+  if (!row) return;
+
+  // Only auto-scroll in desktop view
+  if (window.innerWidth > 768) {
+    const header = document.querySelector('.header-container');
+    const controls = document.querySelector('.controls.desktop-controls');
+    const offset = header.offsetHeight + controls.offsetHeight;
+
+    const scrollOptions = {
+      behavior: smooth ? 'smooth' : 'auto',
+      block: 'nearest',
+    };
+
+    // Calculate the target scroll position
+    const rowRect = row.getBoundingClientRect();
+    const targetScroll = window.scrollY + rowRect.top - offset - 20; // 20px padding
+
+    window.scrollTo({
+      top: targetScroll,
+      behavior: smooth ? 'smooth' : 'auto'
+    });
+  }
+}
+
+function findCurrent(now = new Date()){
+  for(const it of schedule){
+    if(it.duration!=null){
+      const end = new Date(it.start.getTime() + it.duration*1000);
+      if(now >= it.start && now < end) return {item:it, elapsed: (now - it.start)/1000};
+    }
+  }
+  const candidates = schedule.filter(it => now >= it.start && it.duration==null);
+  if(candidates.length) {
+    const it = candidates[candidates.length-1];
+    return {item:it, elapsed: (now - it.start)/1000};
+  }
+  return null;
+}
+
+async function tryLoadSchedule(){
+  statusEl.textContent = 'Loading schedule...';
+  try{
+    const res = await fetch(SCHEDULE_URL, {cache:'no-store'});
+    if(!res.ok) throw new Error();
+    schedule = parseSchedule(await res.json());
+    statusEl.textContent = 'Loaded external schedule.json';
+  }catch{
+    schedule = [];
+    statusEl.textContent = 'Failed to load schedule.json';
+  }
+  renderTable();
+  await handlePlaybackAtLoad();
+}
+
+function setItemStatus(item, text){
+  const el = document.getElementById('st-' + item.idx);
+  if(el) el.textContent = text;
+}
+
+function showLoadingModal() {
+  document.getElementById('loadingModal').style.display = 'flex';
+}
+
+function hideLoadingModal() {
+  document.getElementById('loadingModal').style.display = 'none';
+}
+
+async function handlePlaybackAtLoad(seekTo = null){
+  const now = new Date();
+  const found = findCurrent(now);
+  schedule.forEach(it=>setItemStatus(it,'-'));
+  mediaContainer.innerHTML = '';
+
+  if(!found){
+    statusEl.textContent = 'No scheduled media for right now.';
+    currentItem = null;
+    return;
+  }
+
+  currentItem = found.item;
+  let elapsed = found.elapsed;
+  if (seekTo !== null) elapsed = seekTo;
+  statusEl.textContent = `Preparing '${currentItem.url}' — scheduled ${formatUTC(currentItem.start)}`;
+  setItemStatus(currentItem,'Playing');
+
+  // Scroll to the currently playing row in the table
+    setTimeout(() => {
+      const row = document.getElementById(`row-${currentItem.idx}`);
+      if(row) {
+        // Add highlight class first
+        row.classList.add('highlight-current');
+        
+        // On mobile, account for sticky header and controls
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+          const headerHeight = document.querySelector('.header-container').offsetHeight;
+          const controlsHeight = document.querySelector('.controls').offsetHeight;
+          const totalOffset = headerHeight + controlsHeight + 20; // Add some padding
+          
+          const rowRect = row.getBoundingClientRect();
+          window.scrollTo({
+            top: window.scrollY + rowRect.top - totalOffset,
+            behavior: 'smooth'
+          });
+        } else {
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }, 100);  const ext = currentItem.url.split('.').pop().toLowerCase();
+  const playerContainer = document.createElement('div');
+  playerContainer.className = 'custom-player';
+
+  if(['mp4','webm','ogg'].includes(ext)){
+    player = document.createElement('video');
+    player.width = 640; player.height = 360;
+  } else {
+    player = document.createElement('audio');
+  }
+
+  // Remove default controls and add custom player UI
+  player.preload = 'metadata';
+  player.src = currentItem.url;
+  
+  // Update status and progress when playing
+  player.addEventListener('timeupdate', () => {
+    if (currentItem && !player.paused) {
+      const currentTime = formatDuration(Math.floor(player.currentTime));
+      setItemStatus(currentItem, `Playing (${currentTime})`);
+      
+      // Update progress bars
+      if (player.duration) {
+        const progress = (player.currentTime / player.duration) * 100;
+        // Update mobile progress
+        progressBar.style.width = `${progress}%`;
+        mobileTime.textContent = currentTime;
+        // Update desktop progress
+        desktopProgressBar.style.width = `${progress}%`;
+        desktopTime.textContent = currentTime;
+      }
+    }
+  });
+
+  // Update mobile view info
+  const updateMobileInfo = () => {
+    if (currentItem) {
+      mobileTitle.textContent = currentItem.title || currentItem.url;
+      mobileAirDate.textContent = `Original Air Date: ${currentItem.airDate}`;
+      
+      // Find next item
+      const currentIndex = schedule.findIndex(item => item.idx === currentItem.idx);
+      if (currentIndex > -1 && currentIndex < schedule.length - 1) {
+        const nextItem = schedule[currentIndex + 1];
+        mobileNextTitle.textContent = nextItem.title || nextItem.url;
+        mobileNextAirDate.textContent = `Original Air Date: ${nextItem.airDate}`;
+      }
+    }
+  };
+  
+  updateMobileInfo();
+  player.addEventListener('play', updateMobileInfo);
+
+  mediaContainer.appendChild(player);
+
+  showLoadingModal();
+  
+  await new Promise(resolve=>{
+    const loadTimeout = setTimeout(() => {
+      hideLoadingModal();
+      resolve();
+    }, 30000); // Timeout after 30 seconds
+    
+    player.addEventListener('loadedmetadata', ()=>{
+      clearTimeout(loadTimeout);
+      hideLoadingModal();
+      let seek = elapsed;
+      const dur = currentItem.duration ?? player.duration;
+      if(dur && seek >= dur) seek = Math.max(0, dur - 0.5);
+      try{player.currentTime = Math.max(0, seek);}catch{}
+      resolve();
+    });
+    
+    player.addEventListener('error', () => {
+      clearTimeout(loadTimeout);
+      hideLoadingModal();
+      resolve();
+    });
+    
+    player.load();
+  });
+
+  // Auto-advance to next file when current ends
+  player.addEventListener('ended', () => {
+    const idx = schedule.findIndex(it => it.idx === currentItem.idx);
+    // Remove highlight from previous row
+    if(currentItem && currentItem.idx) {
+      const prevRow = document.getElementById(`row-${currentItem.idx}`);
+      if(prevRow) {
+        prevRow.classList.remove('highlight-current');
+        // Add to past episodes in desktop view
+        prevRow.classList.add('past-episode');
+      }
+    }
+    if(idx >= 0 && idx < schedule.length - 1) {
+      currentItem = schedule[idx + 1];
+      // Scroll to next episode immediately
+      scrollToCurrentEpisode(true);
+      // Scroll to next and play
+      setTimeout(() => {
+        const row = document.getElementById(`row-${currentItem.idx}`);
+        if(row) {
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          row.classList.add('highlight-current');
+        }
+      }, 100);
+      // Play next from beginning
+      statusEl.textContent = `Preparing '${currentItem.url}' — scheduled ${formatUTC(currentItem.start)}`;
+      setItemStatus(currentItem,'Loading');
+      mediaContainer.innerHTML = '';
+      // Always start at beginning for next track
+      handlePlaybackAtLoad(0);
+    } else {
+      statusEl.textContent = 'End of schedule.';
+      playToggle.textContent = 'Play';
+    }
+  });
+
+  try {
+    await player.play();
+    updateStatus(`${currentItem.title || currentItem.url}`);
+    setItemStatus(currentItem, `Playing (${formatDuration(0)})`);
+    // Update past episodes visibility when playback starts
+    document.querySelectorAll('#schedTable tbody tr').forEach(row => {
+      const rowId = parseInt(row.id.replace('row-', ''));
+      if (rowId < currentItem.idx) {
+        row.classList.add('past-episode');
+      }
+    });
+    // Scroll to current episode
+    scrollToCurrentEpisode();
+  } catch {
+    updateStatus('Click Play to start');
+    setItemStatus(currentItem,'Waiting');
+    // Show the autoplay modal
+    document.getElementById('autoplayModal').style.display = 'flex';
+  }
+}
+
+// Modal play button handler
+document.getElementById('modalPlayBtn').addEventListener('click', async () => {
+  if (player && player.paused) {
+    try {
+      await player.play();
+      updateStatus(`Playing: ${currentItem.title || currentItem.url}`);
+      setItemStatus(currentItem, `Playing (${formatDuration(player.currentTime)})`);
+      document.getElementById('autoplayModal').style.display = 'none';
+    } catch (err) {
+      updateStatus('Failed to start playback');
+    }
+  }
 });
+
+tryLoadSchedule();
