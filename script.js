@@ -27,7 +27,8 @@ function parseSchedule(raw) {
       title: item.title || '',
       start: new Date(current),
       duration: (typeof item.duration === 'number' && isFinite(item.duration)) ? item.duration : null,
-      airDate: item.airDate || '-'
+      airDate: item.airDate || '-',
+      image: item.image || ''
     };
     
     schedule.push(entry);
@@ -274,6 +275,19 @@ async function handlePlaybackAtLoad(seekTo = null){
     if (currentItem) {
       mobileTitle.textContent = currentItem.title || currentItem.url;
       mobileAirDate.textContent = `Original Air Date: ${currentItem.airDate}`;
+      
+      // Update cover art
+      const mobileCoverArt = document.getElementById('mobileCoverArt');
+      if (mobileCoverArt) {
+        if (currentItem.image) {
+          mobileCoverArt.src = currentItem.image;
+          mobileCoverArt.style.display = 'block';
+          mobileCoverArt.parentElement.style.display = 'block';
+        } else {
+          mobileCoverArt.style.display = 'none';
+          mobileCoverArt.parentElement.style.display = 'none';
+        }
+      }
       
       // Find next item
       const currentIndex = schedule.findIndex(item => item.idx === currentItem.idx);
