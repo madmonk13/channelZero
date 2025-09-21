@@ -31,7 +31,7 @@ function parseSchedule(raw) {
       image: item.image || ''
     };
     
-    schedule.push(entry);
+    schedule.unshift(entry);
     
     if (entry.duration) {
       current = new Date(current.getTime() + entry.duration * 1000);
@@ -43,7 +43,7 @@ function parseSchedule(raw) {
     // Loop back to the beginning of the raw list when we reach the end
     rawIndex = (rawIndex + 1) % raw.length;
   }
-  
+  console.log(schedule);
   return schedule;
 }
 
