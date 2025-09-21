@@ -365,7 +365,7 @@ document.getElementById('modalPlayBtn').addEventListener('click', async () => {
   if (player && player.paused) {
     try {
       await player.play();
-      updateStatus(`Playing: ${currentItem.title || currentItem.url}`);
+      updateStatus(`Now Playing: ${currentItem.title || currentItem.url}`);
       updateViewInfo();
       document.getElementById('autoplayModal').style.display = 'none';
     } catch (err) {
