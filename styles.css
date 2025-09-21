@@ -53,7 +53,7 @@ body {
   width: 100%;
   height: auto;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  box-shadow: 0 0 12px lightblue;
   margin: 0 auto;
 }
 
@@ -111,7 +111,7 @@ body {
 .progress-container {
   width: 100%;
   height: 4px;
-  background: transparent;
+  background: white;
   border-radius: 2px;
   margin: 12px 0 4px 0;
 }
@@ -202,7 +202,7 @@ body {
   max-width: 100%;
   height: auto;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  box-shadow: 0 0 12px lightblue;
 }
 
 .desktop-info {
@@ -444,6 +444,7 @@ button:hover {
   display: flex;
   gap: 8px;
   align-items: center;
+  display: none;
 }
 
 .highlight-current {
