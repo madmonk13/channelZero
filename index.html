@@ -53,19 +53,33 @@
   </div>
 
   <div class="content-container">
-    <div class="schedTable-container">
-      <table id="schedTable">
-        <thead>
-          <tr><th>#</th><th>Start (UTC)</th><th>Track</th><th>Original Air Date</th><th>Status</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <div class="desktop-progress">
-      <div class="progress-container">
-        <div id="desktopProgressBar" class="progress-bar"></div>
+    <div class="desktop-layout">
+      <div class="desktop-cover-art">
+        <img id="desktopCoverArt" src="" alt="Episode Cover Art">
       </div>
-      <div id="desktopTime" class="desktop-time">00:00:00</div>
+      <div class="desktop-info">
+        <div class="desktop-now-playing">
+          <h3>Now Playing</h3>
+          <div class="desktop-episode-info">
+            <div id="desktopTitle">-</div>
+            <div id="desktopAirDate">Original Air Date: -</div>
+          </div>
+          <div class="desktop-progress">
+            <div class="progress-container">
+              <div id="desktopProgressBar" class="progress-bar"></div>
+            </div>
+            <div id="desktopTime" class="desktop-time">00:00:00</div>
+          </div>
+        </div>
+        
+        <div class="desktop-next">
+          <h3>Up Next</h3>
+          <div class="desktop-episode-info">
+            <div id="desktopNextTitle">-</div>
+            <div id="desktopNextAirDate">Original Air Date: -</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

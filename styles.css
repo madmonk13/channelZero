@@ -33,9 +33,15 @@ body {
   backdrop-filter: blur(8px);
 }
 
-/* Mobile Cover Art */
+/* Mobile Elements - Hidden by default */
+.mobile-cover-art,
+.mobile-info,
+.mobile-controls-fixed {
+  display: none;
+}
+
+/* Mobile Cover Art Styles */
 .mobile-cover-art {
-  display: none; /* Hidden by default */
   width: 100%;
   text-align: center;
 }
@@ -50,9 +56,8 @@ body {
   margin: 0 auto;
 }
 
-/* Mobile Info and Controls */
+/* Mobile Info Styles */
 .mobile-info {
-  display: none; /* Hidden by default */
   background: #111;
   color: #fff;
   padding: 16px;
@@ -160,11 +165,85 @@ body {
   font-size: 16px;
 }
 
-/* Past Episodes (Desktop Only) */
+/* Desktop Layout */
+.desktop-layout {
+  display: none;
+  gap: 32px;
+  padding: 24px;
+  background: #111;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
 @media (min-width: 769px) {
+  /* Desktop specific styles */
+  .desktop-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  /* Explicitly hide all mobile elements in desktop view */
+  .mobile-cover-art,
+  .mobile-info,
+  .mobile-controls-fixed {
+    display: none !important;
+  }
+  
   .past-episode {
     display: none;
   }
+}
+
+.desktop-cover-art {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.desktop-cover-art img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.desktop-info {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.desktop-now-playing h3,
+.desktop-next h3 {
+  font-size: 16px;
+  color: #888;
+  margin: 0 0 16px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.desktop-episode-info div:first-child {
+  font-size: 24px;
+  margin-bottom: 8px;
+  color: #fff;
+}
+
+.desktop-episode-info div:last-child {
+  font-size: 16px;
+  color: #888;
+  margin-bottom: 24px;
+}
+
+.desktop-progress {
+  margin-top: 24px;
+}
+
+.desktop-time {
+  font-family: monospace;
+  color: #888;
+  text-align: center;
+  margin-top: 8px;
+  font-size: 16px;
 }
 
 /* Mobile Responsive Rules */
@@ -184,33 +263,30 @@ body {
     border-bottom: 1px solid #222;
   }
 
-  .controls.desktop-controls {
-    display: none; /* Hide desktop controls on mobile */
+  /* Hide desktop elements */
+  .controls.desktop-controls,
+  .desktop-layout {
+    display: none;
   }
   
-  .mobile-cover-art,
-  .mobile-info {
-    display: block; /* Show mobile info and cover art on mobile */
+  /* Show mobile elements */
+  .mobile-cover-art {
+    display: block;
+    padding: 8px 0;
   }
   
   .mobile-info {
+    display: block;
     padding: 16px;
   }
   
-  .mobile-cover-art {
-    padding: 8px 0;
+  .schedTable-container,
+  #status {
+    display: none;
   }
 
   .mobile-controls-fixed {
-    display: flex; /* Show mobile controls on mobile */
-  }
-
-  .schedTable-container {
-    display: none; /* Hide schedule table on mobile */
-  }
-
-  #status {
-    display: none; /* Hide desktop status on mobile */
+    display: flex;
   }
 
   .content-container {

@@ -1,7 +1,7 @@
 const SCHEDULE_URL = './schedule_rfr.json';
 
 function parseSchedule(raw) {
-  // Find the most recent Monday at midnight UTC
+  // Find the most recent Monday
   const now = new Date();
   const monday = new Date(now);
   monday.setUTCHours(0, 0, 0, 0);
@@ -72,7 +72,6 @@ function formatDuration(seconds) {
 }
 
 const statusEl = document.getElementById('status');
-const tableBody = document.querySelector('#schedTable tbody');
 const mediaContainer = document.getElementById('mediaContainer');
 const muteButton = document.getElementById('muteButton');
 const mobileMuteButton = document.getElementById('mobileMuteButton');
@@ -107,7 +106,63 @@ function handleMuteClick() {
 muteButton.addEventListener('click', handleMuteClick);
 mobileMuteButton.addEventListener('click', handleMuteClick);
 
-function renderTable() {
+// Update view info for both mobile and desktop
+function updateViewInfo() {
+  if (currentItem) {
+    // Update mobile view
+    mobileTitle.textContent = currentItem.title || currentItem.url;
+    mobileAirDate.textContent = `Original Air Date: ${currentItem.airDate}`;
+    
+    // Update desktop view
+    const desktopTitle = document.getElementById('desktopTitle');
+    const desktopAirDate = document.getElementById('desktopAirDate');
+    if (desktopTitle && desktopAirDate) {
+      desktopTitle.textContent = currentItem.title || currentItem.url;
+      desktopAirDate.textContent = `Original Air Date: ${currentItem.airDate}`;
+    }
+    
+    // Update cover art for both views
+    const mobileCoverArt = document.getElementById('mobileCoverArt');
+    const desktopCoverArt = document.getElementById('desktopCoverArt');
+    
+    if (currentItem.image) {
+      if (mobileCoverArt) {
+        mobileCoverArt.src = currentItem.image;
+        mobileCoverArt.style.display = 'block';
+        mobileCoverArt.parentElement.style.display = 'block';
+      }
+      if (desktopCoverArt) {
+        desktopCoverArt.src = currentItem.image;
+      }
+    } else {
+      if (mobileCoverArt) {
+        mobileCoverArt.style.display = 'none';
+        mobileCoverArt.parentElement.style.display = 'none';
+      }
+      if (desktopCoverArt) {
+        desktopCoverArt.style.display = 'none';
+      }
+    }
+    
+    // Find next item
+    const currentIndex = schedule.findIndex(item => item.idx === currentItem.idx);
+    if (currentIndex > -1 && currentIndex < schedule.length - 1) {
+      const nextItem = schedule[currentIndex + 1];
+      // Update mobile next
+      mobileNextTitle.textContent = nextItem.title || nextItem.url;
+      mobileNextAirDate.textContent = `Original Air Date: ${nextItem.airDate}`;
+      // Update desktop next
+      const desktopNextTitle = document.getElementById('desktopNextTitle');
+      const desktopNextAirDate = document.getElementById('desktopNextAirDate');
+      if (desktopNextTitle && desktopNextAirDate) {
+        desktopNextTitle.textContent = nextItem.title || nextItem.url;
+        desktopNextAirDate.textContent = `Original Air Date: ${nextItem.airDate}`;
+      }
+    }
+  }
+}
+
+function updatePlaybackStatus(smooth = true) {
   tableBody.innerHTML = '';
   schedule.forEach(item=>{
     const tr = document.createElement('tr');
@@ -178,13 +233,7 @@ async function tryLoadSchedule(){
     schedule = [];
     statusEl.textContent = 'Failed to load schedule.json';
   }
-  renderTable();
   await handlePlaybackAtLoad();
-}
-
-function setItemStatus(item, text){
-  const el = document.getElementById('st-' + item.idx);
-  if(el) el.textContent = text;
 }
 
 function showLoadingModal() {
@@ -198,7 +247,6 @@ function hideLoadingModal() {
 async function handlePlaybackAtLoad(seekTo = null){
   const now = new Date();
   const found = findCurrent(now);
-  schedule.forEach(it=>setItemStatus(it,'-'));
   mediaContainer.innerHTML = '';
 
   if(!found){
@@ -211,32 +259,11 @@ async function handlePlaybackAtLoad(seekTo = null){
   let elapsed = found.elapsed;
   if (seekTo !== null) elapsed = seekTo;
   statusEl.textContent = `Preparing '${currentItem.url}' — scheduled ${formatUTC(currentItem.start)}`;
-  setItemStatus(currentItem,'Playing');
 
-  // Scroll to the currently playing row in the table
-    setTimeout(() => {
-      const row = document.getElementById(`row-${currentItem.idx}`);
-      if(row) {
-        // Add highlight class first
-        row.classList.add('highlight-current');
-        
-        // On mobile, account for sticky header and controls
-        const isMobile = window.innerWidth <= 768;
-        if (isMobile) {
-          const headerHeight = document.querySelector('.header-container').offsetHeight;
-          const controlsHeight = document.querySelector('.controls').offsetHeight;
-          const totalOffset = headerHeight + controlsHeight + 20; // Add some padding
-          
-          const rowRect = row.getBoundingClientRect();
-          window.scrollTo({
-            top: window.scrollY + rowRect.top - totalOffset,
-            behavior: 'smooth'
-          });
-        } else {
-          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }
-    }, 100);  const ext = currentItem.url.split('.').pop().toLowerCase();
+  // Update the view with current track info
+  updateViewInfo();
+  
+  const ext = currentItem.url.split('.').pop().toLowerCase();
   const playerContainer = document.createElement('div');
   playerContainer.className = 'custom-player';
 
@@ -255,7 +282,7 @@ async function handlePlaybackAtLoad(seekTo = null){
   player.addEventListener('timeupdate', () => {
     if (currentItem && !player.paused) {
       const currentTime = formatDuration(Math.floor(player.currentTime));
-      setItemStatus(currentItem, `Playing (${currentTime})`);
+      updateViewInfo();
       
       // Update progress bars
       if (player.duration) {
@@ -270,37 +297,10 @@ async function handlePlaybackAtLoad(seekTo = null){
     }
   });
 
-  // Update mobile view info
-  const updateMobileInfo = () => {
-    if (currentItem) {
-      mobileTitle.textContent = currentItem.title || currentItem.url;
-      mobileAirDate.textContent = `Original Air Date: ${currentItem.airDate}`;
-      
-      // Update cover art
-      const mobileCoverArt = document.getElementById('mobileCoverArt');
-      if (mobileCoverArt) {
-        if (currentItem.image) {
-          mobileCoverArt.src = currentItem.image;
-          mobileCoverArt.style.display = 'block';
-          mobileCoverArt.parentElement.style.display = 'block';
-        } else {
-          mobileCoverArt.style.display = 'none';
-          mobileCoverArt.parentElement.style.display = 'none';
-        }
-      }
-      
-      // Find next item
-      const currentIndex = schedule.findIndex(item => item.idx === currentItem.idx);
-      if (currentIndex > -1 && currentIndex < schedule.length - 1) {
-        const nextItem = schedule[currentIndex + 1];
-        mobileNextTitle.textContent = nextItem.title || nextItem.url;
-        mobileNextAirDate.textContent = `Original Air Date: ${nextItem.airDate}`;
-      }
-    }
-  };
+
   
-  updateMobileInfo();
-  player.addEventListener('play', updateMobileInfo);
+  updateViewInfo();
+  player.addEventListener('play', updateViewInfo);
 
   mediaContainer.appendChild(player);
 
@@ -334,30 +334,11 @@ async function handlePlaybackAtLoad(seekTo = null){
   // Auto-advance to next file when current ends
   player.addEventListener('ended', () => {
     const idx = schedule.findIndex(it => it.idx === currentItem.idx);
-    // Remove highlight from previous row
-    if(currentItem && currentItem.idx) {
-      const prevRow = document.getElementById(`row-${currentItem.idx}`);
-      if(prevRow) {
-        prevRow.classList.remove('highlight-current');
-        // Add to past episodes in desktop view
-        prevRow.classList.add('past-episode');
-      }
-    }
     if(idx >= 0 && idx < schedule.length - 1) {
       currentItem = schedule[idx + 1];
-      // Scroll to next episode immediately
-      scrollToCurrentEpisode(true);
-      // Scroll to next and play
-      setTimeout(() => {
-        const row = document.getElementById(`row-${currentItem.idx}`);
-        if(row) {
-          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          row.classList.add('highlight-current');
-        }
-      }, 100);
+      updateViewInfo();
       // Play next from beginning
       statusEl.textContent = `Preparing '${currentItem.url}' — scheduled ${formatUTC(currentItem.start)}`;
-      setItemStatus(currentItem,'Loading');
       mediaContainer.innerHTML = '';
       // Always start at beginning for next track
       handlePlaybackAtLoad(0);
@@ -370,19 +351,10 @@ async function handlePlaybackAtLoad(seekTo = null){
   try {
     await player.play();
     updateStatus(`${currentItem.title || currentItem.url}`);
-    setItemStatus(currentItem, `Playing (${formatDuration(0)})`);
-    // Update past episodes visibility when playback starts
-    document.querySelectorAll('#schedTable tbody tr').forEach(row => {
-      const rowId = parseInt(row.id.replace('row-', ''));
-      if (rowId < currentItem.idx) {
-        row.classList.add('past-episode');
-      }
-    });
-    // Scroll to current episode
-    scrollToCurrentEpisode();
+    updateViewInfo();
   } catch {
     updateStatus('Click Play to start');
-    setItemStatus(currentItem,'Waiting');
+    updateViewInfo();
     // Show the autoplay modal
     document.getElementById('autoplayModal').style.display = 'flex';
   }
@@ -394,7 +366,7 @@ document.getElementById('modalPlayBtn').addEventListener('click', async () => {
     try {
       await player.play();
       updateStatus(`Playing: ${currentItem.title || currentItem.url}`);
-      setItemStatus(currentItem, `Playing (${formatDuration(player.currentTime)})`);
+      updateViewInfo();
       document.getElementById('autoplayModal').style.display = 'none';
     } catch (err) {
       updateStatus('Failed to start playback');
